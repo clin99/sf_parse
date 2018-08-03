@@ -6,6 +6,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(BOOST_ROOT "./boost_1_67_0")
 include_directories(${INCLUDE_DIRECTORIES} ${BOOST_ROOT} include)
-#include_directories(${Boost_INCLUDE_DIR})
 
 add_executable(spef_parse main.cpp)                           # executable and linkage

@@ -13,4 +13,8 @@
 
 # Executables
 *.exe
-*.out
+*.out 
+
+
+# CMake
+build/

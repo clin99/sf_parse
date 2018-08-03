@@ -13,7 +13,7 @@ struct output : public boost::static_visitor<>
 
 
 int main(){
-  std::ifstream ifs("./simple.spef");
+  std::ifstream ifs("../simple.spef");
   ifs.seekg(0, std::ios::end);
   size_t size = ifs.tellg();
   std::string buffer(size, ' ');

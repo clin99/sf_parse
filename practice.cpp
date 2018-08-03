@@ -53,7 +53,7 @@ int main(){
       //auto& v = boost::spirit::x3::_attr(t);
     };
 
-    constexpr auto rule_name {boost::spirit::x3::lexeme[+(boost::spirit::x3::char_("a-zA-Z0-9[]/:_"))]};
+    //constexpr auto rule_name = boost::spirit::x3::lexeme[+(boost::spirit::x3::char_("a-zA-Z0-9[]/:_"))];
 
     std::string input("*A 123");
 
@@ -67,7 +67,8 @@ int main(){
 
 		auto iter = input.begin();
 		auto iter_end = input.end();
-    phrase_parse(iter, iter_end, rule[f], space);
+    phrase_parse(iter, iter_end, rule, space);
+    //phrase_parse(iter, iter_end, rule[f], space);
 
     return 0;
   }

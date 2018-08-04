@@ -76,24 +76,31 @@ int main(int argc, char* argv[]){
   char suffix_delim;
   char postfix_delim;
 
+  { 
+    spef::Data data;
+    tao::pegtl::memory_input<> in(buffer, "");
+    tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
 
-  {
-    tao::pegtl::memory_input<> in2("AB 123 CD", "");
-    //tao::pegtl::argv_input<> in(argv, 1);
-    //tao::pegtl::parse< hello::grammar, hello::action >(in, name );
-    //tao::pegtl::parse<spef::Compound, spef::A2>(in2, name);
-    tao::pegtl::parse<spef::All, spef::action>(in2, name);
-    return 0;
+    data.show();
   }
 
 
-  //tao::pegtl::memory_input<> in2(buffer, "");
-  {
-    tao::pegtl::memory_input<> in2("*SPEF \"Hello 123\"\nQQ AAB", "");
-    //tao::pegtl::argv_input<> in(argv, 1);
-    //tao::pegtl::parse< hello::grammar, hello::action >(in, name );
-    tao::pegtl::parse<spef::Standard, spef::A1>(in2, name);
-  }
+  //{
+  //  tao::pegtl::memory_input<> in2("AB 123 CD", "");
+  //  //tao::pegtl::argv_input<> in(argv, 1);
+  //  //tao::pegtl::parse< hello::grammar, hello::action >(in, name );
+  //  //tao::pegtl::parse<spef::Compound, spef::A2>(in2, name);
+  //  tao::pegtl::parse<spef::All, spef::action>(in2, name);
+  //  return 0;
+  //}
+
+  ////tao::pegtl::memory_input<> in2(buffer, "");
+  //{
+  //  tao::pegtl::memory_input<> in2("*SPEF \"Hello 123\"\nQQ AAB", "");
+  //  //tao::pegtl::argv_input<> in(argv, 1);
+  //  //tao::pegtl::parse< hello::grammar, hello::action >(in, name );
+  //  tao::pegtl::parse<spef::Standard, spef::A1>(in2, name);
+  //}
   
 
 

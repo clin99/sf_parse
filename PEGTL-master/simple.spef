@@ -1,16 +1,8 @@
 *SPEF "IEEE 1481-1998"
 *DESIGN "simple"
 *DATE "Tue Sep 25 11:51:50 2012"
-// This is comment 1
-
 *VENDOR "TAU 2015 Contest"
-
-// This is comment 2
 *PROGRAM "Benchmark Parasitic Generator"
-
-// This is comment 3
-// This is comment 4
-// This is comment 5
 *VERSION "0.0"
 *DESIGN_FLOW "NETLIST_TYPE_VERILOG"
 *DIVIDER /
@@ -20,6 +12,15 @@
 *C_UNIT 1 FF
 *R_UNIT 1 KOHM
 *L_UNIT 1 UH
+
+// This is comment 1
+
+// This is comment 2
+
+
+// This is comment 3
+// This is comment 4
+// This is comment 5
 
 
 

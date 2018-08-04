@@ -197,102 +197,172 @@ namespace double_
 };
 
 
+enum class State{
+  NONE,
+  // header
+  STANDARD,
+  DESIGN_NAME,
+  DATE,
+  VENDOR,
+  PROGRAM,
+  VERSION,
+  DESIGN_FLOW,
+  DIVIDER,
+  DELIMITER,
+  BUS_DELIMITER 
+};
 
+struct Data{
+  State state {State::NONE};
+  std::string standard;
+  std::string design_name;
+  std::string date;
+  std::string vendor;
+  std::string program;
+  std::string version;
+  std::string design_flow;
+  std::string divider;
+  std::string delimiter;
+  std::string bus_delimiter;
+
+  void add_header(std::string&&);
+
+  void show();
+};
+
+inline void Data::show(){
+  std::cout << "Standard: " << standard << "\n" 
+            << "Design name: " << design_name << "\n" 
+            << "Date: " << date << "\n" 
+            << "Vendor: " << vendor << "\n"
+            << "Program: " << program << "\n"
+            << "Version: " << version << "\n"
+            << "Design Flow: " << design_flow << "\n"
+            << "Divider: " << divider << "\n"
+            << "Delimiter: " << delimiter << "\n"
+            << "Bus Delimiter: " << bus_delimiter << "\n"
+  ;
+}
+
+inline void Data::add_header(std::string&& s){
+  switch(state){
+    case State::NONE:
+      standard = s;
+      state = State::STANDARD;
+      break;
+    case State::STANDARD:
+      design_name = s;
+      state = State::DESIGN_NAME;
+      break;
+    case State::DESIGN_NAME:
+      date = s;
+      state = State::DATE;
+      break;
+    case State::DATE:
+      vendor = s;
+      state = State::VENDOR;
+      break;
+    case State::VENDOR:
+      program = s;
+      state = State::PROGRAM;
+      break;
+    case State::PROGRAM:
+      version = s;
+      state = State::VERSION;
+      break;
+    case State::VERSION:
+      design_flow = s;
+      state = State::DESIGN_FLOW;
+      break;
+    case State::DESIGN_FLOW:
+      divider = s;
+      state = State::DIVIDER;
+      break;
+    case State::DIVIDER:
+      delimiter = s;
+      state = State::DELIMITER;
+      break;
+    case State::DELIMITER:
+      bus_delimiter = s;
+      state = State::BUS_DELIMITER;
+      break;
+    case State::BUS_DELIMITER:
+      bus_delimiter = s;
+      state = State::NONE;
+      break;
+    default:
+      break;
+  }
+}
 
 
 namespace pegtl = tao::TAO_PEGTL_NAMESPACE;
-
-struct Quote: pegtl::string<'"'>
-{};
-
-struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::not_at<Quote>, pegtl::any>, Quote>
-//struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::alpha>, Quote>
-{};
-
-struct Standard: pegtl::must<TAO_PEGTL_KEYWORD("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
-{};
-
-
-template<typename QuotedString>
-struct A1: pegtl::nothing<QuotedString>
-{};
-
-template<>
-struct A1<QuotedString>
-{
-  template <typename Input>
-  static void apply(const Input& in, std::string& v){
-    //std::cout << "Hello\n";
-    v = in.string();
-    std::cout << "Get = " << v << '\n';
-  };
-};
-
-
-
-struct Compound: pegtl::must<
-          pegtl::sor<pegtl::plus<pegtl::alpha>, pegtl::space, pegtl::plus<pegtl::digit>>>
-{};
-
-
-template<typename Compound>
-struct A2: pegtl::nothing<Compound>
-{};
-
-
-template<>
-struct A2<Compound>
-{
-  template <typename Input>
-  static void apply(const Input& in, std::string& v){
-    //std::cout << "Hello\n";
-    v = in.string();
-    std::cout << "Get = " << v << '\n';
-  };
-};
-
-
-struct AB: pegtl::must<TAO_PEGTL_KEYWORD("AB")>
-{};
-
-//struct NUM: pegtl::must<TAO_PEGTL_KEYWORD("123")>
-struct NUM: pegtl::must<double_::grammar>
-//struct NUM: pegtl::must<pegtl::alpha>
-{};
-
-struct All: pegtl::must<AB, pegtl::space, NUM>
-{};
-
-
 
 template<typename T>
 struct action: pegtl::nothing<T>
 {};
 
+struct Comment: pegtl::must<TAO_PEGTL_KEYWORD("//"), pegtl::until<pegtl::eol>>
+{};
+
+
+struct Quote: pegtl::string<'"'>
+{};
+
+//struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::not_at<Quote>, pegtl::any>, Quote>
+struct QuotedString: pegtl::must<Quote, pegtl::until<Quote>>
+//struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::alpha>, Quote>
+{};
+
+struct Character: pegtl::any
+{};
 
 template<>
-struct action<AB>
+struct action<QuotedString>  
 {
   template <typename Input>
-  static void apply(const Input& in, std::string& v){
-    auto q = in.string();
-    std::cout << "This is AB : " << q << "\n";
+  static void apply(const Input& in, Data& d){
+    auto str {in.string()};
+    d.add_header(str.substr(1, str.size()-2));
   };
 };
 
+struct rule_standard: pegtl::must<TAO_PEGTL_KEYWORD("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+{};
 
-template<>
-struct action<NUM>
-{
-  template <typename Input>
-  static void apply(const Input& in, std::string& v){
-    auto q = in.string();
-    std::cout << "This is NUM : " << q << "\n";
-  };
-};
+struct rule_design: pegtl::must<TAO_PEGTL_KEYWORD("*DESIGN"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+{};
+
+struct rule_date: pegtl::must<TAO_PEGTL_KEYWORD("*DATE"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+{};
+
+struct rule_vendor: pegtl::must<TAO_PEGTL_KEYWORD("*VENDOR"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+{};
+
+struct rule_program: pegtl::must<TAO_PEGTL_KEYWORD("*PROGRAM"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+{};
+
+struct rule_version: pegtl::must<TAO_PEGTL_KEYWORD("*VERSION"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+{};
+
+struct rule_design_flow: pegtl::must<TAO_PEGTL_KEYWORD("*DESIGN_FLOW"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+{};
+
+struct rule_delimiter: pegtl::must<TAO_PEGTL_KEYWORD("*DELIMITER"), pegtl::plus<pegtl::space>, Character, pegtl::eol>
+{};
 
 
-
+struct rule_spef: pegtl::seq<
+  rule_standard, 
+  rule_design, 
+  rule_date, 
+  rule_vendor,
+  rule_program,
+  rule_version,
+  rule_design_flow
+  //rule_delimiter
+>
+{};
 
 
 };    // end of namespace spef. --------------------------------------------------------------------

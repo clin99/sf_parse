@@ -16,6 +16,7 @@
 #include <tuple>
 #include <array>
 #include <map>
+#include <cctype>
 
 namespace spef{
 
@@ -231,16 +232,17 @@ struct Data{
 };
 
 inline void Data::show(){
-  std::cout << "Standard: " << standard << "\n" 
-            << "Design name: " << design_name << "\n" 
-            << "Date: " << date << "\n" 
-            << "Vendor: " << vendor << "\n"
-            << "Program: " << program << "\n"
-            << "Version: " << version << "\n"
-            << "Design Flow: " << design_flow << "\n"
-            << "Divider: " << divider << "\n"
-            << "Delimiter: " << delimiter << "\n"
-            << "Bus Delimiter: " << bus_delimiter << "\n"
+  std::cout 
+    << "Standard: " << standard << "\n" 
+    << "Design name: " << design_name << "\n" 
+    << "Date: " << date << "\n" 
+    << "Vendor: " << vendor << "\n"
+    << "Program: " << program << "\n"
+    << "Version: " << version << "\n"
+    << "Design Flow: " << design_flow << "\n"
+    << "Divider: " << divider << "\n"
+    << "Delimiter: " << delimiter << "\n"
+    << "Bus Delimiter: " << bus_delimiter << "\n"
   ;
 }
 
@@ -308,15 +310,10 @@ struct Comment: pegtl::must<TAO_PEGTL_KEYWORD("//"), pegtl::until<pegtl::eol>>
 
 struct Quote: pegtl::string<'"'>
 {};
-
 //struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::not_at<Quote>, pegtl::any>, Quote>
 struct QuotedString: pegtl::must<Quote, pegtl::until<Quote>>
 //struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::alpha>, Quote>
 {};
-
-struct Character: pegtl::any
-{};
-
 template<>
 struct action<QuotedString>  
 {
@@ -326,6 +323,52 @@ struct action<QuotedString>
     d.add_header(str.substr(1, str.size()-2));
   };
 };
+
+
+struct SpefDivider: pegtl::any
+{};
+template<>
+struct action<SpefDivider>  
+{
+  template <typename Input>
+  static bool apply(const Input& in, Data& d){
+    if(in.size() != 1){
+      return false;
+    }
+    d.add_header(in.string());
+    return true;
+  };
+};
+
+
+struct SpefDelimiter: pegtl::any
+{};
+template<>
+struct action<SpefDelimiter>  
+{
+  template <typename Input>
+  static bool apply(const Input& in, Data& d){
+    if(in.size() != 1){
+      return false;
+    }
+    d.add_header(in.string());
+    return true;
+  };
+};
+
+struct SpefBusDelimiter: pegtl::must<pegtl::plus<pegtl::not_at<pegtl::eol>, pegtl::any>>
+{};
+template<>
+struct action<SpefBusDelimiter>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::string str {in.string()};
+    str.erase(std::remove_if(str.begin(), str.end(), [](auto c){return std::isspace(c);}), str.end());
+    d.add_header(std::move(str));
+  };
+};
+
 
 struct rule_standard: pegtl::must<TAO_PEGTL_KEYWORD("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
 {};
@@ -348,7 +391,13 @@ struct rule_version: pegtl::must<TAO_PEGTL_KEYWORD("*VERSION"), pegtl::plus<pegt
 struct rule_design_flow: pegtl::must<TAO_PEGTL_KEYWORD("*DESIGN_FLOW"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
 {};
 
-struct rule_delimiter: pegtl::must<TAO_PEGTL_KEYWORD("*DELIMITER"), pegtl::plus<pegtl::space>, Character, pegtl::eol>
+struct rule_divider: pegtl::must<TAO_PEGTL_KEYWORD("*DIVIDER"), pegtl::plus<pegtl::space>, SpefDivider, pegtl::eol>
+{};
+
+struct rule_delimiter: pegtl::must<TAO_PEGTL_KEYWORD("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, pegtl::eol>
+{};
+
+struct rule_bus_delimiter: pegtl::must<TAO_PEGTL_KEYWORD("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, pegtl::eol>
 {};
 
 
@@ -359,8 +408,10 @@ struct rule_spef: pegtl::seq<
   rule_vendor,
   rule_program,
   rule_version,
-  rule_design_flow
-  //rule_delimiter
+  rule_design_flow,
+  rule_divider,
+  rule_delimiter,
+  rule_bus_delimiter
 >
 {};
 

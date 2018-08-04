@@ -76,6 +76,13 @@ int main(int argc, char* argv[]){
   char suffix_delim;
   char postfix_delim;
 
+  //{
+  //  spef::Data data;
+  //  tao::pegtl::memory_input<> in("abacda 12345\nQQ AAB", "");
+  //  tao::pegtl::parse<spef::SpefBusDelimiter, spef::action>(in, data);
+  //  return 0;
+  //}
+
   { 
     spef::Data data;
     tao::pegtl::memory_input<> in(buffer, "");

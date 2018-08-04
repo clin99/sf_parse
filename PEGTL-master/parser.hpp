@@ -304,8 +304,7 @@ template<typename T>
 struct action: pegtl::nothing<T>
 {};
 
-struct Comment: pegtl::must<TAO_PEGTL_KEYWORD("//"), pegtl::until<pegtl::eol>>
-{};
+
 
 
 struct Quote: pegtl::string<'"'>
@@ -370,34 +369,42 @@ struct action<SpefBusDelimiter>
 };
 
 
-struct rule_standard: pegtl::must<TAO_PEGTL_KEYWORD("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+
+//struct Comment: pegtl::must<TAO_PEGTL_KEYWORD("//"), pegtl::until<pegtl::eol>>
+struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
 {};
 
-struct rule_design: pegtl::must<TAO_PEGTL_KEYWORD("*DESIGN"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
 {};
 
-struct rule_date: pegtl::must<TAO_PEGTL_KEYWORD("*DATE"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+struct rule_standard: pegtl::must<TAO_PEGTL_STRING("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, DontCare> 
 {};
 
-struct rule_vendor: pegtl::must<TAO_PEGTL_KEYWORD("*VENDOR"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+struct rule_design: pegtl::must<TAO_PEGTL_STRING("*DESIGN"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_program: pegtl::must<TAO_PEGTL_KEYWORD("*PROGRAM"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+struct rule_date: pegtl::must<TAO_PEGTL_STRING("*DATE"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_version: pegtl::must<TAO_PEGTL_KEYWORD("*VERSION"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+struct rule_vendor: pegtl::must<TAO_PEGTL_STRING("*VENDOR"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_design_flow: pegtl::must<TAO_PEGTL_KEYWORD("*DESIGN_FLOW"), pegtl::plus<pegtl::space>, QuotedString, pegtl::eol>
+struct rule_program: pegtl::must<TAO_PEGTL_STRING("*PROGRAM"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_divider: pegtl::must<TAO_PEGTL_KEYWORD("*DIVIDER"), pegtl::plus<pegtl::space>, SpefDivider, pegtl::eol>
+struct rule_version: pegtl::must<TAO_PEGTL_STRING("*VERSION"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_delimiter: pegtl::must<TAO_PEGTL_KEYWORD("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, pegtl::eol>
+struct rule_design_flow: pegtl::must<TAO_PEGTL_STRING("*DESIGN_FLOW"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_bus_delimiter: pegtl::must<TAO_PEGTL_KEYWORD("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, pegtl::eol>
+struct rule_divider: pegtl::must<TAO_PEGTL_STRING("*DIVIDER"), pegtl::plus<pegtl::space>, SpefDivider, DontCare>
+{};
+
+struct rule_delimiter: pegtl::must<TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, DontCare>
+{};
+
+struct rule_bus_delimiter: pegtl::must<TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
 {};
 
 

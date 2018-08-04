@@ -78,8 +78,9 @@ int main(int argc, char* argv[]){
 
   //{
   //  spef::Data data;
-  //  tao::pegtl::memory_input<> in("abacda 12345\nQQ AAB", "");
-  //  tao::pegtl::parse<spef::SpefBusDelimiter, spef::action>(in, data);
+  //  //tao::pegtl::memory_input<> in("abacda 12345\nQQ AAB", "");
+  //  tao::pegtl::memory_input<> in("//\n", "");
+  //  tao::pegtl::parse<spef::Comment, spef::action>(in, data);
   //  return 0;
   //}
 

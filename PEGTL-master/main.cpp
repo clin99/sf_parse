@@ -76,13 +76,14 @@ int main(int argc, char* argv[]){
   char suffix_delim;
   char postfix_delim;
 
-  {
-    spef::Data data;
-    tao::pegtl::memory_input<> in("*abacda 1234\nQQ AAB", "");
-    //tao::pegtl::memory_input<> in("//\n", "");
-    tao::pegtl::parse<spef::rule_name_map, spef::action>(in, data);
-    return 0;
-  }
+  //{
+  //  spef::Data data;
+  //  //tao::pegtl::memory_input<> in("*abacda 1234  \nQQ AAB", "");
+  //  tao::pegtl::memory_input<> in("*PORTS\nQQ AAB", "");
+  //  //tao::pegtl::memory_input<> in("//\n", "");
+  //  tao::pegtl::parse<tao::pegtl::opt<tao::pegtl::star<spef::rule_name_map, spef::DontCare>>, spef::action>(in, data);
+  //  return 0;
+  //}
 
   { 
     spef::Data data;

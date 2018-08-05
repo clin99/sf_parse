@@ -118,43 +118,7 @@ struct Spef {
 
 
 
-/*
-const inline auto rule_comment = boost::spirit::x3::space | 
-  boost::spirit::x3::lexeme[ "//" >> *(boost::spirit::x3::char_ - boost::spirit::x3::eol) >> boost::spirit::x3::eol];
 
-const inline auto rule_quoted_string = boost::spirit::x3::rule<class QuotedString, std::string>() 
-                                     = '"' >> boost::spirit::x3::no_skip[*(boost::spirit::x3::char_ - '"')] >> '"';
-
-// Header section
-const inline auto rule_standard     {"*SPEF"        >> rule_quoted_string};
-const inline auto rule_design_name  {"*DESIGN"      >> rule_quoted_string};
-const inline auto rule_data         {"*DATE"        >> rule_quoted_string};
-const inline auto rule_vendor       {"*VENDOR"      >> rule_quoted_string};
-const inline auto rule_program      {"*PROGRAM"     >> rule_quoted_string};
-const inline auto rule_version      {"*VERSION"     >> rule_quoted_string};
-const inline auto rule_design_flow  {"*DESIGN_FLOW" >> rule_quoted_string};
-const inline auto rule_divider      {"*DIVIDER"     >> boost::spirit::x3::char_};
-const inline auto rule_delimiter    {"*DELIMITER"   >> boost::spirit::x3::char_};
-const inline auto rule_bus_delimiter{"*BUS_DELIMITER" >> boost::spirit::x3::char_ >> boost::spirit::x3::char_};
-const inline auto rule_t_unit       {"*T_UNIT"      >> boost::spirit::x3::double_ >> Units >> 'S'};
-const inline auto rule_c_unit       {"*C_UNIT"      >> boost::spirit::x3::double_ >> Units >> 'F'};
-const inline auto rule_r_unit       {"*R_UNIT"      >> boost::spirit::x3::double_ >> Units >> "OHM"};
-const inline auto rule_l_unit       {"*L_UNIT"      >> boost::spirit::x3::double_ >> Units >> 'H'};
-
-
-// Name map
-//const inline auto rule_net_name {boost::spirit::x3::lexeme[+(boost::spirit::x3::char_ - boost::spirit::x3::eol)]};
-const inline auto rule_name {boost::spirit::x3::lexeme[+(boost::spirit::x3::char_("a-zA-Z0-9[]/:_"))]};
-const inline auto rule_name_map {"*NAME_MAP" >> *('*' >> boost::spirit::x3::int_ >> rule_name)};
-
-// Port 
-const inline auto rule_port {"*PORTS" >> *('*' >> rule_name >> boost::spirit::x3::char_("IOB") >> 
-  *(("*C" >> boost::spirit::x3::double_ >> boost::spirit::x3::double_)  | 
-    ("*L" >> boost::spirit::x3::double_) |  
-    ("*S" >> boost::spirit::x3::double_ >> boost::spirit::x3::double_))
-  )
-};
-*/
 
 
 class SpefParser{
@@ -231,7 +195,8 @@ enum class State{
   DIVIDER,
   DELIMITER,
   BUS_DELIMITER,
-  NAME_MAP
+  NAME_MAP,
+  PORTS
 };
 
 struct Data{
@@ -414,42 +379,43 @@ struct action<SpefBusDelimiter>
 struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
 {};
 
-struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
+//struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
+struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, Comment>>
 {};
 
-struct rule_standard: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, DontCare> 
+struct rule_standard: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*SPEF"), pegtl::plus<pegtl::blank>, QuotedString, DontCare> 
 {};
 
-struct rule_design: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_design: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
 {};
 
-struct rule_date: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DATE"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_date: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DATE"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
 {};
 
-struct rule_vendor: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VENDOR"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_vendor: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VENDOR"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
 {};
 
-struct rule_program: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PROGRAM"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_program: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PROGRAM"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
 {};
 
-struct rule_version: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VERSION"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_version: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VERSION"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
 {};
 
-struct rule_design_flow: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN_FLOW"), pegtl::plus<pegtl::space>, 
+struct rule_design_flow: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN_FLOW"), pegtl::plus<pegtl::blank>, 
   QuotedString, DontCare>
 {};
 
-struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"), pegtl::plus<pegtl::space>, SpefDivider, DontCare>
+struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"), pegtl::plus<pegtl::blank>, SpefDivider, DontCare>
 {};
 
-struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, DontCare>
+struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::blank>, SpefDelimiter, DontCare>
 {};
 
-struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
+struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::blank>, SpefBusDelimiter, DontCare>
 {};
 
 struct rule_unit: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,TAO_PEGTL_STRING("_UNIT"), 
-  pegtl::plus<pegtl::space>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>, pegtl::one<'K','M','U','N','P','F'>, 
+  pegtl::plus<pegtl::blank>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::blank>, pegtl::one<'K','M','U','N','P','F'>, 
   pegtl::sor<pegtl::one<'S','F','H'>, TAO_PEGTL_STRING("OHM")>>
 {};
 template <>
@@ -459,10 +425,7 @@ struct action<rule_unit>
   static bool apply(const Input& in, Data& d){
     std::string str {in.string()};
     auto vec = split_on_space(str);
-    if(vec.size() != 3){
-      assert(false);
-      return false;
-    }
+
     switch(vec[0][1]){
       case 'T':
         d.t_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
@@ -496,27 +459,35 @@ struct action<rule_name_map_beg>
 };
 
 
-//struct rule_name_map: pegtl::must<pegtl::bol, pegtl::until<pegtl::space>, pegtl::plus<pegtl::space>, pegtl::until<pegtl::eol>>
-struct rule_name_map: pegtl::must<pegtl::bol, 
-  TAO_PEGTL_STRING("*"),
+
+struct rule_name_map: pegtl::seq<
+  pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, TAO_PEGTL_STRING("*"),
   pegtl::until<pegtl::at<pegtl::blank>>,
   pegtl::plus<pegtl::blank>,
-  pegtl::until<pegtl::at<pegtl::space>>,
-  //pegtl::seq<pegtl::not_at<pegtl::space>>,
-  //pegtl::until<pegtl::sor<pegtl::space,pegtl::eol>>,
-  pegtl::star<pegtl::blank>, pegtl::eol
-  //pegtl::star<pegtl::sor<pegtl::space, pegtl::eol>>
+  pegtl::until<pegtl::at<pegtl::space>>
 >
-//struct rule_name_map: pegtl::must<pegtl::bol, pegtl::seq<pegtl::not_at<pegtl::space>, pegtl::plus<pegtl::any>>>
 {};
 template <>
 struct action<rule_name_map>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "Match = " << in.string() << "=" << '\n';
+    std::cout << "NameMAP = " << in.string() << "=" << '\n';
   }
 };
+
+
+struct rule_port_beg: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PORTS"), DontCare>
+{};
+template <>
+struct action<rule_port_beg>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.state = State::PORTS;
+  }
+};
+
 
 
 struct rule_spef: pegtl::seq<
@@ -534,7 +505,9 @@ struct rule_spef: pegtl::seq<
   rule_unit,  DontCare,
   rule_unit,  DontCare,
   rule_unit,  DontCare,
-  rule_name_map_beg
+  rule_name_map_beg,
+  pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
+  rule_port_beg
 >
 {};
 

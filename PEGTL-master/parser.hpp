@@ -499,12 +499,12 @@ struct action<rule_name_map_beg>
 //struct rule_name_map: pegtl::must<pegtl::bol, pegtl::until<pegtl::space>, pegtl::plus<pegtl::space>, pegtl::until<pegtl::eol>>
 struct rule_name_map: pegtl::must<pegtl::bol, 
   TAO_PEGTL_STRING("*"),
-  pegtl::until<pegtl::at<pegtl::space>>,
-  pegtl::plus<pegtl::space>,
+  pegtl::until<pegtl::at<pegtl::blank>>,
+  pegtl::plus<pegtl::blank>,
   pegtl::until<pegtl::at<pegtl::space>>,
   //pegtl::seq<pegtl::not_at<pegtl::space>>,
   //pegtl::until<pegtl::sor<pegtl::space,pegtl::eol>>,
-  pegtl::star<pegtl::space>
+  pegtl::star<pegtl::blank>, pegtl::eol
   //pegtl::star<pegtl::sor<pegtl::space, pegtl::eol>>
 >
 //struct rule_name_map: pegtl::must<pegtl::bol, pegtl::seq<pegtl::not_at<pegtl::space>, pegtl::plus<pegtl::any>>>

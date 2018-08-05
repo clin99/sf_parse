@@ -588,8 +588,7 @@ struct rule_port: pegtl::seq<
         pegtl::seq<TAO_PEGTL_STRING("*S"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>
       >
     >
-  >,
-  pegtl::until<pegtl::at<pegtl::space>>
+  >
 >
 {};
 template <>
@@ -622,8 +621,10 @@ struct action<rule_port>
         break;
     }
 
-    // Set up type
-    p.type = vec[2][1];
+    // Set up type 
+    if(vec.size() > 2){
+      p.type = vec[2][1];
+    }
 
     // Insert values
     for(size_t i=3; i<vec.size(); i++){
@@ -635,23 +636,133 @@ struct action<rule_port>
 
 
 
-//struct rule_conn: pegtl::seq<
-//  pegtl::bol, <TAO_PEGTL_STRING("*CONN")>,
-//  pegtl::blank, pegtl::until<pegtl::at<pegtl::blank>>,
-//  pegtl::blank, double_::rule
-//>
-//{};
+struct rule_conn_beg: pegtl::seq<
+  pegtl::bol, TAO_PEGTL_STRING("*CONN")
+>
+{};
+template <>
+struct action<rule_conn_beg>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "Conn begin\n";
+  }
+};
+
+struct rule_conn: pegtl::seq<
+  pegtl::bol, pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, pegtl::plus<pegtl::space>,
+  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
+  pegtl::must<pegtl::one<'I','O','B'>>, 
+  pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*C"), 
+  pegtl::plus<pegtl::space>, double_::rule, pegtl::plus<pegtl::space>, double_::rule>>,
+  pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*L"), 
+  pegtl::plus<pegtl::space>, double_::rule>>,
+  pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*D"), 
+  pegtl::plus<pegtl::space>, pegtl::plus<pegtl::identifier_other>>>
+>
+{};
+template <>
+struct action<rule_conn>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "Conn : " << in.string() << '\n';
+  }
+};
 
 
 
-struct rule_net: pegtl::seq<
+
+struct rule_cap_beg: pegtl::seq<
+  pegtl::bol, TAO_PEGTL_STRING("*CAP")
+>
+{};
+template <>
+struct action<rule_cap_beg>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "CAP begin\n";
+  }
+};
+
+
+
+struct rule_cap_ground: pegtl::seq<
+  pegtl::bol, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>,
+  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
+  double_::rule
+>
+{};
+template <>
+struct action<rule_cap_ground>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "CAP GROUND =" << in.string() << '\n';
+  }
+};
+
+
+struct rule_cap_couple: pegtl::seq<
+  pegtl::bol, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>,
+  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
+  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
+  double_::rule
+>
+{};
+template <>
+struct action<rule_cap_couple>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "CAP COUPLE =" << in.string() << '\n';
+  }
+};
+
+
+
+struct rule_res_beg: pegtl::seq<
+  pegtl::bol, TAO_PEGTL_STRING("*RES")
+>
+{};
+template <>
+struct action<rule_res_beg>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "RES begin\n";
+  }
+};
+
+struct rule_res: pegtl::seq<
+  pegtl::bol, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>,
+  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
+  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
+  double_::rule
+>
+{};
+template <>
+struct action<rule_res>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "RES =" << in.string() << '\n';
+  }
+};
+
+
+
+
+
+struct rule_net_beg: pegtl::seq<
   pegtl::bol, TAO_PEGTL_STRING("*D_NET"),
   pegtl::blank, pegtl::until<pegtl::at<pegtl::blank>>,
   pegtl::blank, double_::rule
 >
 {};
 template <>
-struct action<rule_net>  
+struct action<rule_net_beg>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -664,6 +775,21 @@ struct action<rule_net>
     std::swap(d.current_net, vec[1]);
   }
 };
+
+
+struct rule_net_end: pegtl::seq<
+  pegtl::bol, TAO_PEGTL_STRING("*END")
+>
+{};
+template <>
+struct action<rule_net_end>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "*END\n\n";
+  }
+};
+
 
 
 
@@ -679,15 +805,22 @@ struct rule_spef: pegtl::seq<
   rule_divider,
   rule_delimiter,
   rule_bus_delimiter,
-  rule_unit,  DontCare,
-  rule_unit,  DontCare,
-  rule_unit,  DontCare,
-  rule_unit,  DontCare,
+  rule_unit, DontCare,
+  rule_unit, DontCare,
+  rule_unit, DontCare,
+  rule_unit, DontCare,
   rule_name_map_beg,
   pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
   rule_port_beg,
   pegtl::plus<pegtl::seq<rule_port, DontCare>>,
-  rule_net
+  pegtl::star<
+    rule_net_beg, DontCare,
+    pegtl::if_must<pegtl::seq<rule_conn_beg, DontCare>, pegtl::plus<pegtl::seq<rule_conn, DontCare>>>,
+    pegtl::if_must<pegtl::seq<rule_cap_beg,  DontCare>, 
+      pegtl::plus<pegtl::seq<pegtl::sor<rule_cap_ground, rule_cap_couple>, DontCare>>>,
+    pegtl::if_must<pegtl::seq<rule_res_beg,  DontCare>, pegtl::plus<pegtl::seq<rule_res, DontCare>>>, 
+    rule_net_end, DontCare
+  >
 >
 {};
 

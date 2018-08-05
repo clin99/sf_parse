@@ -76,6 +76,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 
+  buffer.append(1, EOF);
   //std::cout << buffer << '\n';
   //exit(1);
 
@@ -105,6 +106,7 @@ int main(int argc, char* argv[]){
     tao::pegtl::memory_input<> in(buffer, "");
     tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
 
+    std::cout << "\n\n\n";
     data.show();
   }
 

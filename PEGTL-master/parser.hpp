@@ -160,7 +160,7 @@ namespace double_
    struct decimal : seq< number< digit >, opt< e, exponent > > {}; 
    struct hexadecimal : seq< one< '0' >, one< 'x', 'X' >, number< xdigit >, opt< p, exponent > > {}; 
 
-   struct grammar : seq< plus_minus, sor< hexadecimal, decimal, inf, nan > > {}; 
+   struct rule : seq< plus_minus, sor< hexadecimal, decimal, inf, nan > > {}; 
 };
 
 
@@ -225,6 +225,8 @@ struct Data{
   double c_unit {0.0};
   double r_unit {0.0};
   double l_unit {0.0};
+
+  std::unordered_map<std::string, std::string> name_map;
 
 
   void add_header(std::string&&);
@@ -458,8 +460,6 @@ struct action<rule_name_map_beg>
   }
 };
 
-
-
 struct rule_name_map: pegtl::seq<
   pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, TAO_PEGTL_STRING("*"),
   pegtl::until<pegtl::at<pegtl::blank>>,
@@ -472,7 +472,9 @@ struct action<rule_name_map>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "NameMAP = " << in.string() << "=" << '\n';
+    std::string str {in.string()};
+    auto vec = split_on_space(str); 
+    d.name_map.insert({vec[0], vec[1]});
   }
 };
 
@@ -487,6 +489,30 @@ struct action<rule_port_beg>
     d.state = State::PORTS;
   }
 };
+
+struct rule_port: pegtl::seq<
+  pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
+  pegtl::until<pegtl::at<pegtl::blank>>,
+  pegtl::blank,
+  pegtl::one<'I','O','B'>,
+  pegtl::blank,
+  pegtl::sor<
+    pegtl::seq<TAO_PEGTL_STRING("*C"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>,
+    pegtl::seq<TAO_PEGTL_STRING("*L"), pegtl::blank, double_::rule>,
+    pegtl::seq<TAO_PEGTL_STRING("*S"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>
+  >,
+  pegtl::until<pegtl::at<pegtl::space>>
+>
+{};
+template <>
+struct action<rule_port>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::cout << "PORT =" << in.string() << '\n';
+  }
+};
+
 
 
 
@@ -507,7 +533,8 @@ struct rule_spef: pegtl::seq<
   rule_unit,  DontCare,
   rule_name_map_beg,
   pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
-  rule_port_beg
+  rule_port_beg,
+  pegtl::plus<pegtl::seq<rule_port, DontCare>>
 >
 {};
 

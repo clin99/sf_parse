@@ -118,21 +118,6 @@ struct Spef {
 
 
 
-
-
-
-class SpefParser{
-
-  public:
-  private: 
-
-    void test();
-
-
-};
-
-
-
 namespace double_
 {
    using namespace tao::TAO_PEGTL_NAMESPACE;  // NOLINT
@@ -182,6 +167,90 @@ inline std::vector<std::string> split_on_space(const std::string& s){
 //}
 
 
+
+
+enum class ConnectionType {
+  INTERNAL,
+  EXTERNAL
+};
+
+
+enum class ConnectionDirection {
+  INPUT,
+  OUTPUT,
+  INOUT
+};
+
+
+struct Port{
+  Port() = default;
+  std::string name;
+  ConnectionDirection direction;  // I, O, B 
+  char type;  // C, L or S
+  std::vector<double> values;
+
+  friend std::ostream& operator<<(std::ostream&, const Port&);
+};
+
+std::ostream& operator<<(std::ostream& os, const Port& p)  
+{  
+  os << p.name << ' ';
+  switch(p.direction){
+    case ConnectionDirection::INPUT:
+      os << 'I' << ' ';
+      break;
+    case ConnectionDirection::OUTPUT:
+      os << 'O' << ' ';
+      break;
+    case ConnectionDirection::INOUT:
+      os << 'B' << ' ';
+      break;
+    default: break;
+  }
+  os << p.type << ' ';
+  for(const auto&v : p.values){
+    os << v << ' ';
+  }
+  os << '\n';
+  return os;  
+}  
+
+
+struct Connection {
+
+  std::string name;
+  ConnectionType type;
+  ConnectionDirection direction;
+
+  //Connection(const std::string&, ConnectionType, ConnectionDirection);
+
+  Connection() = default;
+  //Connection(Connection&&) = default;
+
+  //Connection& operator = (Connection&&) = default;
+};
+
+
+
+struct Net {
+
+  std::string name;
+  float lcap;
+  std::vector<Connection> connections;
+  std::vector<std::tuple<std::string, float>> caps;
+  std::vector<std::tuple<std::string, std::string, float>> ress;
+
+  //void scale_capacitance(float);
+  //void scale_resistance(float);
+
+  Net() = default;
+  //Net(Net&&) = default;
+
+  //Net& operator = (Net&&) = default;
+};
+
+
+
 enum class State{
   NONE,
   // header
@@ -198,6 +267,7 @@ enum class State{
   NAME_MAP,
   PORTS
 };
+
 
 struct Data{
   State state {State::NONE};
@@ -227,7 +297,10 @@ struct Data{
   double l_unit {0.0};
 
   std::unordered_map<std::string, std::string> name_map;
+  std::unordered_map<std::string, Port> ports;
+  std::unordered_map<std::string, Net> nets;
 
+  std::string current_net;
 
   void add_header(std::string&&);
 
@@ -251,6 +324,16 @@ inline void Data::show(){
     << "R Unit: " << r_unit << "\n"
     << "L Unit: " << l_unit << "\n"
   ;
+  std::cout << "*NAME_MAP\n";
+  for(const auto& [k,v]: name_map){
+    std::cout << k << ' ' << v << '\n';
+  }
+  for(const auto& [k,v]: ports){
+    std::cout << "PORT[" << k << "] " << v;
+  }
+  for(const auto& [k,v]: nets){
+    std::cout << "NET[" << k << "] " << '\n';
+  }
 }
 
 inline void Data::add_header(std::string&& s){
@@ -382,7 +465,8 @@ struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
 {};
 
 //struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
-struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, Comment>>
+//struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, Comment>>
+struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, pegtl::eof>>
 {};
 
 struct rule_standard: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*SPEF"), pegtl::plus<pegtl::blank>, QuotedString, DontCare> 
@@ -492,14 +576,18 @@ struct action<rule_port_beg>
 
 struct rule_port: pegtl::seq<
   pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
-  pegtl::until<pegtl::at<pegtl::blank>>,
+  pegtl::until<pegtl::at<pegtl::blank>>, 
   pegtl::blank,
-  pegtl::one<'I','O','B'>,
-  pegtl::blank,
-  pegtl::sor<
-    pegtl::seq<TAO_PEGTL_STRING("*C"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>,
-    pegtl::seq<TAO_PEGTL_STRING("*L"), pegtl::blank, double_::rule>,
-    pegtl::seq<TAO_PEGTL_STRING("*S"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>
+  pegtl::must<pegtl::one<'I','O','B'>>,
+  pegtl::opt<
+    pegtl::seq<
+      pegtl::blank,
+      pegtl::sor<
+        pegtl::seq<TAO_PEGTL_STRING("*C"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>,
+        pegtl::seq<TAO_PEGTL_STRING("*L"), pegtl::blank, double_::rule>,
+        pegtl::seq<TAO_PEGTL_STRING("*S"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>
+      >
+    >
   >,
   pegtl::until<pegtl::at<pegtl::space>>
 >
@@ -508,14 +596,78 @@ template <>
 struct action<rule_port>  
 {
   template <typename Input>
-  static void apply(const Input& in, Data& d){
-    std::cout << "PORT =" << in.string() << '\n';
+  static bool apply(const Input& in, Data& d){
+    std::string str {in.string()};
+    auto vec = split_on_space(str); 
+    d.ports.insert({vec[0], {}});
+    auto& p = d.ports.at(vec[0]);
+
+    // Set up name 
+    p.name = vec[0];
+
+    // Set up port direction
+    switch(vec[1][0]){
+      case 'O':
+        p.direction = ConnectionDirection::OUTPUT;
+        break;
+      case 'I':
+        p.direction = ConnectionDirection::INPUT;
+        break;
+      case 'B':
+        p.direction = ConnectionDirection::INOUT;
+        break;
+      default:
+        std::cout << "Unknown port type!\n";
+        return false;
+        break;
+    }
+
+    // Set up type
+    p.type = vec[2][1];
+
+    // Insert values
+    for(size_t i=3; i<vec.size(); i++){
+      p.values.emplace_back(std::stod(vec[i]));
+    }
+    return true;
   }
 };
 
 
 
+//struct rule_conn: pegtl::seq<
+//  pegtl::bol, <TAO_PEGTL_STRING("*CONN")>,
+//  pegtl::blank, pegtl::until<pegtl::at<pegtl::blank>>,
+//  pegtl::blank, double_::rule
+//>
+//{};
 
+
+
+struct rule_net: pegtl::seq<
+  pegtl::bol, TAO_PEGTL_STRING("*D_NET"),
+  pegtl::blank, pegtl::until<pegtl::at<pegtl::blank>>,
+  pegtl::blank, double_::rule
+>
+{};
+template <>
+struct action<rule_net>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    std::string str {in.string()};
+    auto vec = split_on_space(str); 
+
+    d.nets.insert({vec[1], {}});
+    auto &n = d.nets.at(vec[1]);
+    n.lcap = std::stof(vec[2]);
+    std::swap(d.current_net, vec[1]);
+  }
+};
+
+
+
+//-------------------------------------------------------------------------------------------------
 struct rule_spef: pegtl::seq<
   rule_standard, 
   rule_design, 
@@ -534,7 +686,8 @@ struct rule_spef: pegtl::seq<
   rule_name_map_beg,
   pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
   rule_port_beg,
-  pegtl::plus<pegtl::seq<rule_port, DontCare>>
+  pegtl::plus<pegtl::seq<rule_port, DontCare>>,
+  rule_net
 >
 {};
 

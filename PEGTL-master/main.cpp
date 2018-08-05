@@ -64,6 +64,21 @@ int main(int argc, char* argv[]){
   ifs.read(&buffer[0], size); 
   ifs.close();
 
+	for(size_t i=0; i<buffer.size(); i++){
+		if(buffer[i] == '/' && i+1 < buffer.size() && buffer[i+1] == '/') {
+			buffer[i] = buffer[i+1] = ' ';
+			for(i=i+2; i<buffer.size(); ++i) {
+				if(buffer[i] == '\n' || buffer[i] == '\r') {
+					break;
+				}
+				else buffer[i] = ' ';
+			}
+		}
+	}
+
+  //std::cout << buffer << '\n';
+  //exit(1);
+
   std::string name;
   std::string design;
   std::string date;

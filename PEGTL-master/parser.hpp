@@ -17,6 +17,8 @@
 #include <array>
 #include <map>
 #include <cctype>
+#include <regex>
+#include <string_view>
 
 namespace spef{
 
@@ -198,6 +200,24 @@ namespace double_
 };
 
 
+inline std::vector<std::string> split_on_space(const std::string& s){
+  const static std::regex ws_re {"\\s+"};
+  return std::vector<std::string>(std::sregex_token_iterator(s.begin(), s.end(), ws_re, -1), {});
+}
+
+//inline std::vector<std::string_view> split_on_space(std::string_view s){
+//  const static std::regex ws_re {"\\s+"};
+//  const static std::regex_token_iterator<std::string_view::iterator> end_of_buf;
+//  std::regex_token_iterator<std::string_view::iterator> iter(s.begin(), s.end(), ws_re, -1);
+//  std::vector<std::string_view> vec;
+//  while(iter != end_of_buf){
+//    vec.emplace_back(iter->str());
+//    iter ++;
+//  }
+//  return vec;
+//}
+
+
 enum class State{
   NONE,
   // header
@@ -226,6 +246,21 @@ struct Data{
   std::string delimiter;
   std::string bus_delimiter;
 
+  const std::unordered_map<char, double> scale = {
+    {'K', 1e3},
+    {'M', 1e-3},
+    {'U', 1e-6},
+    {'N', 1e-9},
+    {'P', 1e-12},
+    {'F', 1e-15}
+  };
+
+  double t_unit {0.0};
+  double c_unit {0.0};
+  double r_unit {0.0};
+  double l_unit {0.0};
+
+
   void add_header(std::string&&);
 
   void show();
@@ -243,6 +278,10 @@ inline void Data::show(){
     << "Divider: " << divider << "\n"
     << "Delimiter: " << delimiter << "\n"
     << "Bus Delimiter: " << bus_delimiter << "\n"
+    << "T Unit: " << t_unit << "\n"
+    << "C Unit: " << c_unit << "\n"
+    << "R Unit: " << r_unit << "\n"
+    << "L Unit: " << l_unit << "\n"
   ;
 }
 
@@ -377,35 +416,78 @@ struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
 struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
 {};
 
-struct rule_standard: pegtl::must<TAO_PEGTL_STRING("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, DontCare> 
+struct rule_standard: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*SPEF"), pegtl::plus<pegtl::space>, QuotedString, DontCare> 
 {};
 
-struct rule_design: pegtl::must<TAO_PEGTL_STRING("*DESIGN"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_design: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_date: pegtl::must<TAO_PEGTL_STRING("*DATE"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_date: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DATE"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_vendor: pegtl::must<TAO_PEGTL_STRING("*VENDOR"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_vendor: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VENDOR"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_program: pegtl::must<TAO_PEGTL_STRING("*PROGRAM"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_program: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PROGRAM"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_version: pegtl::must<TAO_PEGTL_STRING("*VERSION"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_version: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VERSION"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
 {};
 
-struct rule_design_flow: pegtl::must<TAO_PEGTL_STRING("*DESIGN_FLOW"), pegtl::plus<pegtl::space>, QuotedString, DontCare>
+struct rule_design_flow: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN_FLOW"), pegtl::plus<pegtl::space>, 
+  QuotedString, DontCare>
 {};
 
-struct rule_divider: pegtl::must<TAO_PEGTL_STRING("*DIVIDER"), pegtl::plus<pegtl::space>, SpefDivider, DontCare>
+struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"), pegtl::plus<pegtl::space>, SpefDivider, DontCare>
 {};
 
-struct rule_delimiter: pegtl::must<TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, DontCare>
+struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, DontCare>
 {};
 
-struct rule_bus_delimiter: pegtl::must<TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
+struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
 {};
+
+struct rule_unit: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,TAO_PEGTL_STRING("_UNIT"), 
+  pegtl::plus<pegtl::space>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>, pegtl::one<'K','M','U','N','P','F'>, 
+  pegtl::sor<pegtl::one<'S','F','H'>, TAO_PEGTL_STRING("OHM")>>
+{};
+
+
+template <>
+struct action<rule_unit>  
+{
+  template <typename Input>
+  static bool apply(const Input& in, Data& d){
+    std::string str {in.string()};
+    auto vec = split_on_space(str);
+    if(vec.size() != 3){
+      std::cout << "vec size = " << vec.size() << '\n';
+      std::cout << "FUCK\n";
+      for(auto &v : vec){
+        std::cout << v << '\n';
+      }
+      assert(false);
+      return false;
+    }
+    switch(vec[0][1]){
+      case 'T':
+        d.t_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        break;
+      case 'C':
+        d.c_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        break;
+      case 'R':
+        d.r_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        break;
+      case 'L':
+        d.l_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        break;
+      default:
+        break;
+    }
+    return true;
+  };
+};
 
 
 struct rule_spef: pegtl::seq<
@@ -418,7 +500,11 @@ struct rule_spef: pegtl::seq<
   rule_design_flow,
   rule_divider,
   rule_delimiter,
-  rule_bus_delimiter
+  rule_bus_delimiter,
+  rule_unit,  DontCare,
+  rule_unit,  DontCare,
+  rule_unit,  DontCare,
+  rule_unit,  DontCare
 >
 {};
 

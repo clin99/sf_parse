@@ -215,7 +215,7 @@ struct Net {
   std::string name;
   float lcap;
   std::vector<Connection> connections;
-  std::vector<std::tuple<std::string, float>> caps;
+  std::vector<std::tuple<std::string, std::string, float>> caps;
   std::vector<std::tuple<std::string, std::string, float>> ress;
 
   //void scale_capacitance(float);
@@ -658,7 +658,7 @@ struct action<rule_conn_beg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "Conn begin\n";
+    //std::cout << "Conn begin\n";
   }
 };
 
@@ -682,6 +682,7 @@ struct action<rule_conn>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    //std::cout << "Conn : " << in.string() << '\n';
     auto &n = d.nets.at(d.current_net);
     auto &c = n.connections.emplace_back();
 
@@ -717,8 +718,6 @@ struct action<rule_conn>
         std::cout << "Unknown connection information!\n";
       }
     }
-
-    std::cout << "Conn : " << in.string() << '\n';
   }
 };
 
@@ -751,7 +750,10 @@ struct action<rule_cap_ground>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "CAP GROUND =" << in.string() << '\n';
+    //std::cout << "CAP GROUND =" << in.string() << '\n';
+    auto vec = split_on_space(in.string());
+    auto &n = d.nets.at(d.current_net);
+    n.caps.emplace_back(std::make_tuple(vec[1], "", std::stof(vec[2])));
   }
 };
 
@@ -768,7 +770,10 @@ struct action<rule_cap_couple>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "CAP COUPLE =" << in.string() << '\n';
+    //std::cout << "CAP COUPLE =" << in.string() << '\n';
+    auto vec = split_on_space(in.string());
+    auto &n = d.nets.at(d.current_net);
+    n.caps.emplace_back(std::make_tuple(vec[1], vec[2], std::stof(vec[3])));
   }
 };
 
@@ -783,7 +788,7 @@ struct action<rule_res_beg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "RES begin\n";
+    //std::cout << "RES begin\n";
   }
 };
 
@@ -799,7 +804,10 @@ struct action<rule_res>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "RES =" << in.string() << '\n';
+    //std::cout << "RES =" << in.string() << '\n';
+    auto vec = split_on_space(in.string());
+    auto &n = d.nets.at(d.current_net);
+    n.ress.emplace_back(std::make_tuple(vec[1], vec[2], std::stof(vec[3])));
   }
 };
 

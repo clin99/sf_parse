@@ -913,7 +913,7 @@ struct action<rule_net_beg>
   template <typename Input>
   static void apply(const Input& in, Data& d){
     std::string str {in.string()};
-    auto vec = split_on_space(str); 
+    auto vec {split_on_space(str)}; 
 
     d.nets.insert({vec[1], {}});
     auto &n = d.nets.at(vec[1]);
@@ -963,6 +963,21 @@ struct rule_spef: pegtl::must<
 >
 {};
 
+
+
+
+//-------------------------------------------------------------------------------------------------
+//struct rule_qq: pegtl::must<pegtl::plus<pegtl::digit, pegtl::blank, pegtl::alpha, pegtl::space, pegtl::digit>>
+struct rule_qq: pegtl::must<pegtl::plus<pegtl::digit>>
+{};
+template <>
+struct action<rule_qq>
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+  }
+};
+
 template<typename Rule>
 struct my_control : tao::pegtl::normal<Rule>
 {
@@ -971,11 +986,20 @@ struct my_control : tao::pegtl::normal<Rule>
    template< typename Input, typename... States >
    static void raise(const Input& in, States&&...)
    {
-      throw tao::pegtl::parse_error(error_message, in);
+     throw tao::pegtl::parse_error(error_message, in);
    }
 };
+//template<typename T> const std::string my_control<pegtl::plus<T>>::error_message  = "Plus error"; 
+//template<typename T> const std::string my_control<T>::error_message  = "Plus error";
+//template<> const std::string my_control<pegtl::alpha>::error_message = "Alpha error";
+//template<> const std::string my_control<pegtl::digit>::error_message = "Digit error";
+//template<> const std::string my_control<pegtl::blank>::error_message = "Blank error";
+//template<> const std::string my_control<rule_qq>::error_message = "Rule THIS IS CUSTOM ERROR!";
+template<> const std::string my_control<pegtl::plus<pegtl::digit>>::error_message = "Hello";
+//template<> const std::string my_control<rule_spef>::error_message = "Rule spef parse error!";
 
-template<> const std::string my_control<rule_spef>::error_message = "Rule spef parse error!";
+
+
 
 };    // end of namespace spef. --------------------------------------------------------------------
 

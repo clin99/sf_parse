@@ -85,14 +85,30 @@ int main(int argc, char* argv[]){
   //exit(1);
 
 
-  //{
-  //  spef::Data data;
-  //  //tao::pegtl::memory_input<> in("*abacda 1234  \nQQ AAB", "");
-  //  tao::pegtl::memory_input<> in("*PORTS\nQQ AAB", "");
-  //  //tao::pegtl::memory_input<> in("//\n", "");
-  //  tao::pegtl::parse<tao::pegtl::opt<tao::pegtl::star<spef::rule_name_map, spef::DontCare>>, spef::action>(in, data);
-  //  return 0;
-  //}
+  {
+    spef::Data data;
+    //tao::pegtl::memory_input<> in("*abacda 1234  \nQQ AAB", "");
+    tao::pegtl::memory_input<> in("7 b\na 1", "");
+    //tao::pegtl::memory_input<> in("//\n", "");
+    try{
+      tao::pegtl::parse<spef::rule_qq, spef::action, spef::my_control>(in, data);
+    }
+    //catch(const std::exception& e){
+    catch(const tao::pegtl::parse_error& e){
+      std::cout << "Exception here:\n";
+      std::cout << e.what() << std::endl;
+
+      const auto p = e.positions.front();
+      std::cout << in.line_as_string( p ) << std::endl;
+      std::cout << std::string(p.byte_in_line, ' ') << '^' << std::endl;
+      std::cout << "At line : " << p.line << "  byte = " << p.byte_in_line << '\n';
+      std::cout << "Byte : " << p.byte << '\n';
+
+      //std::cout << e.error_message << '\n';
+    }
+
+    return 0;
+  }
 
   { 
     spef::Data data;

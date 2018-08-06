@@ -56,9 +56,9 @@ namespace hello
 
 
 int main(int argc, char* argv[]){
+  bool show {false};
   //std::ifstream ifs("/home/clin99/Software/spirit/aes_cipher_top.spef");
   std::ifstream ifs("./simple.spef");
-  bool show {false};
   show = true;
 
   ifs.seekg(0, std::ios::end);
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]){
       tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
       std::cout << "\n\n\n";
       if(show){
-        data.show();
+        std::cout << data.dump() << '\n';
       }
     }
     catch(const std::exception& e){

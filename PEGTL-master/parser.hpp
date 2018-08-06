@@ -366,11 +366,12 @@ struct Data{
 
   void add_header(const std::string&);
 
-  void show();
+  std::string dump() const;
 };
 
-inline void Data::show(){
-  std::cout 
+inline std::string Data::dump() const {
+  std::ostringstream os;
+  os 
     << "Standard:" << standard << "\n" 
     << "Design name:" << design_name << "\n" 
     << "Date:" << date << "\n" 
@@ -386,21 +387,22 @@ inline void Data::show(){
     << "R Unit:" << r_unit << "\n"
     << "L Unit:" << l_unit << "\n"
   ;
-  std::cout << '\n';
+  os << '\n';
   if(not name_map.empty()){
-    std::cout << "*NAME_MAP\n";
+    os << "*NAME_MAP\n";
   }
   for(const auto& [k,v]: name_map){
-    std::cout << k << ' ' << v << '\n';
+    os << k << ' ' << v << '\n';
   }
-  std::cout << '\n';
+  os << '\n';
   for(const auto& [k,v]: ports){
-    std::cout << "PORT[" << k << "] \n" << v << '\n';
+    os << "PORT[" << k << "] \n" << v << '\n';
   }
-  std::cout << '\n';
+  os << '\n';
   for(const auto& [k,v]: nets){
-    std::cout << "NET[" << k << "] \n" <<  v << '\n';
+    os << "NET[" << k << "] \n" <<  v << '\n';
   }
+  return os.str();
 }
 
 inline void Data::add_header(const std::string& s){
@@ -951,8 +953,7 @@ struct rule_spef: pegtl::must<
   pegtl::rep_max<4, pegtl::seq<rule_unit, DontCare>>,
   pegtl::opt<rule_name_map_beg, pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>>,
   rule_port_beg, pegtl::plus<pegtl::seq<rule_port, DontCare>>,
-  pegtl::star<
-    rule_net_beg, DontCare,
+  pegtl::star<rule_net_beg, DontCare,
     pegtl::if_must<pegtl::seq<rule_conn_beg, DontCare>, pegtl::plus<pegtl::seq<rule_conn, DontCare>>>,
     pegtl::if_must<pegtl::seq<rule_cap_beg,  DontCare>, 
       pegtl::plus<pegtl::seq<pegtl::sor<rule_cap_ground, rule_cap_couple>, DontCare>>>,

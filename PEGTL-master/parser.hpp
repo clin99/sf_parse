@@ -362,6 +362,7 @@ struct Data{
   std::unordered_map<std::string, Port> ports;
   std::unordered_map<std::string, Net> nets;
 
+  // TODO: change to iterator 
   std::string current_net;
 
   void add_header(const std::string&);
@@ -447,10 +448,10 @@ inline void Data::add_header(const std::string& s){
       bus_delimiter = s;
       state = State::BUS_DELIMITER;
       break;
-    case State::BUS_DELIMITER:
-      bus_delimiter = s;
-      state = State::NONE;
-      break;
+    //case State::BUS_DELIMITER:
+    //  bus_delimiter = s;
+    //  state = State::NONE;
+    //  break;
     default:
       break;
   }
@@ -501,6 +502,7 @@ struct action<Header>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    // TODO
     auto str {in.string()};
     //std::cout << "Header = " << str << std::endl;
     d.add_header(str);
@@ -538,7 +540,7 @@ struct action<SpefDelimiter>
   };
 };
 
-struct SpefBusDelimiter: pegtl::must<pegtl::plus<pegtl::not_at<pegtl::eol>, pegtl::any>>
+struct SpefBusDelimiter: pegtl::must<pegtl::any, pegtl::star<pegtl::space>, pegtl::any>
 {};
 template<>
 struct action<SpefBusDelimiter>  
@@ -597,8 +599,9 @@ struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), p
 struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
 {};
 
+// TODO: bol
 struct rule_unit: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,
-  TAO_PEGTL_STRING("_UNIT"), pegtl::plus<pegtl::space>, pegtl::plus<pegtl::digit>, 
+  TAO_PEGTL_STRING("_UNIT"), pegtl::plus<pegtl::space>, double_::rule, 
   pegtl::plus<pegtl::space>, pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
   pegtl::sor<TAO_PEGTL_STRING("HENRY"), TAO_PEGTL_STRING("OHM"), pegtl::one<'S','F','H'>>>
 {};
@@ -648,6 +651,7 @@ struct action<rule_name_map_beg>
 };
 
 struct rule_name_map: pegtl::seq<
+  // TODO : , TAO_PEGTL_STRING("*D_NET")
   pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, TAO_PEGTL_STRING("*"),
   pegtl::until<pegtl::at<pegtl::space>>,
   pegtl::plus<pegtl::space>,
@@ -677,6 +681,7 @@ struct action<rule_port_beg>
   }
 };
 
+// TODO: All sections are optional
 struct rule_port: pegtl::seq<
   pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
   pegtl::until<pegtl::at<pegtl::space>>, 
@@ -752,6 +757,10 @@ struct action<rule_conn_beg>
   }
 };
 
+
+// TODO: alias keword
+// using token = pegtl::until<pegtl::at<pegtl::space>>
+// using delimiter = pegtl::plus<pegtl::space>
 struct rule_conn: pegtl::seq<
   pegtl::bol, pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, pegtl::plus<pegtl::space>,
   pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
@@ -951,9 +960,12 @@ struct rule_spef: pegtl::must<
   rule_delimiter,
   rule_bus_delimiter,
   pegtl::rep_max<4, pegtl::seq<rule_unit, DontCare>>,
+  // TODO: opt no need star
   pegtl::opt<rule_name_map_beg, pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>>,
+  // TODO: opt port 
   rule_port_beg, pegtl::plus<pegtl::seq<rule_port, DontCare>>,
   pegtl::star<rule_net_beg, DontCare,
+    // change plus to star
     pegtl::if_must<pegtl::seq<rule_conn_beg, DontCare>, pegtl::plus<pegtl::seq<rule_conn, DontCare>>>,
     pegtl::if_must<pegtl::seq<rule_cap_beg,  DontCare>, 
       pegtl::plus<pegtl::seq<pegtl::sor<rule_cap_ground, rule_cap_couple>, DontCare>>>,
@@ -968,7 +980,7 @@ struct rule_spef: pegtl::must<
 
 //-------------------------------------------------------------------------------------------------
 //struct rule_qq: pegtl::must<pegtl::plus<pegtl::digit, pegtl::blank, pegtl::alpha, pegtl::space, pegtl::digit>>
-struct rule_qq: pegtl::must<pegtl::plus<pegtl::digit>>
+struct rule_qq: pegtl::must<pegtl::plus<pegtl::seq<pegtl::digit, pegtl::blank>>, pegtl::alpha>
 {};
 template <>
 struct action<rule_qq>
@@ -991,13 +1003,13 @@ struct my_control : tao::pegtl::normal<Rule>
 };
 //template<typename T> const std::string my_control<pegtl::plus<T>>::error_message  = "Plus error"; 
 //template<typename T> const std::string my_control<T>::error_message  = "Plus error";
-//template<> const std::string my_control<pegtl::alpha>::error_message = "Alpha error";
+template<> const std::string my_control<pegtl::alpha>::error_message = "Alpha error";
 //template<> const std::string my_control<pegtl::digit>::error_message = "Digit error";
 //template<> const std::string my_control<pegtl::blank>::error_message = "Blank error";
 //template<> const std::string my_control<rule_qq>::error_message = "Rule THIS IS CUSTOM ERROR!";
 template<> const std::string my_control<pegtl::plus<pegtl::digit>>::error_message = "Hello";
 //template<> const std::string my_control<rule_spef>::error_message = "Rule spef parse error!";
-
+template<> const std::string my_control<pegtl::plus<pegtl::seq<pegtl::digit, pegtl::blank>>>::error_message = "AA";
 
 
 

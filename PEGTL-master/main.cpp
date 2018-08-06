@@ -57,9 +57,10 @@ namespace hello
 
 int main(int argc, char* argv[]){
   bool show {false};
+  std::ifstream ifs("/home/clin99/Software/OpenTimer/benchmark/vga_lcd/vga_lcd.spef");
   //std::ifstream ifs("/home/clin99/Software/spirit/aes_cipher_top.spef");
-  std::ifstream ifs("./simple.spef");
-  show = true;
+  //std::ifstream ifs("./simple.spef");
+  //show = true;
 
   ifs.seekg(0, std::ios::end);
   size_t size = ifs.tellg();
@@ -85,30 +86,29 @@ int main(int argc, char* argv[]){
   //exit(1);
 
 
-  {
-    spef::Data data;
-    //tao::pegtl::memory_input<> in("*abacda 1234  \nQQ AAB", "");
-    tao::pegtl::memory_input<> in("7 b\na 1", "");
-    //tao::pegtl::memory_input<> in("//\n", "");
-    try{
-      tao::pegtl::parse<spef::rule_qq, spef::action, spef::my_control>(in, data);
-    }
-    //catch(const std::exception& e){
-    catch(const tao::pegtl::parse_error& e){
-      std::cout << "Exception here:\n";
-      std::cout << e.what() << std::endl;
+  //{
+  //  spef::Data data;
+  //  //tao::pegtl::memory_input<> in("*abacda 1234  \nQQ AAB", "");
+  //  tao::pegtl::memory_input<> in("7 b\na 1", "");
+  //  //tao::pegtl::memory_input<> in("//\n", "");
+  //  try{
+  //    tao::pegtl::parse<spef::rule_qq, spef::action, spef::my_control>(in, data);
+  //  }
+  //  //catch(const std::exception& e){
+  //  catch(const tao::pegtl::parse_error& e){
+  //    std::cout << "Exception here:\n";
+  //    std::cout << e.what() << std::endl;
 
-      const auto p = e.positions.front();
-      std::cout << in.line_as_string( p ) << std::endl;
-      std::cout << std::string(p.byte_in_line, ' ') << '^' << std::endl;
-      std::cout << "At line : " << p.line << "  byte = " << p.byte_in_line << '\n';
-      std::cout << "Byte : " << p.byte << '\n';
+  //    const auto p = e.positions.front();
+  //    std::cout << in.line_as_string( p ) << std::endl;
+  //    std::cout << std::string(p.byte_in_line, ' ') << '^' << std::endl;
+  //    std::cout << "At line : " << p.line << "  byte = " << p.byte_in_line << '\n';
+  //    std::cout << "Byte : " << p.byte << '\n';
+  //    //std::cout << e.error_message << '\n';
+  //  }
 
-      //std::cout << e.error_message << '\n';
-    }
-
-    return 0;
-  }
+  //  return 0;
+  //}
 
   { 
     spef::Data data;
@@ -123,7 +123,6 @@ int main(int argc, char* argv[]){
     catch(const std::exception& e){
       std::cout << "PARSE FAILED WITH EXCEPTION: " << e.what() << std::endl;
     }
-
   }
 
 

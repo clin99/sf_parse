@@ -205,7 +205,6 @@ std::ostream& operator<<(std::ostream& os, const Port& p)
   for(const auto&v : p.values){
     os << v << ' ';
   }
-  os << '\n';
   return os;  
 }  
 
@@ -218,7 +217,7 @@ struct Connection {
 
   std::optional<std::pair<double, double>> coordinate;
   std::optional<double> load;    
-  std::optional<std::string> driving_cell;
+  std::string driving_cell;
 
   //Connection(const std::string&, ConnectionType, ConnectionDirection);
 
@@ -227,6 +226,21 @@ struct Connection {
 
   //Connection& operator = (Connection&&) = default;
 };
+
+std::ostream& operator<<(std::ostream& os, const Connection& c)
+{
+  os << c.type << ' ' << c.name << ' ' << c.direction;
+  if(c.coordinate.has_value()){
+    os << " *C " << std::get<0>(*c.coordinate) << ' ' << std::get<1>(*c.coordinate);
+  }
+  if(c.load.has_value()){
+    os << " *L " << *c.load;
+  }
+  if(not c.driving_cell.empty()){
+    os << " *D " << c.driving_cell;
+  }
+  return os;  
+}
 
 
 
@@ -246,6 +260,35 @@ struct Net {
 
   //Net& operator = (Net&&) = default;
 };
+
+
+std::ostream& operator<<(std::ostream& os, const Net& n)
+{
+  os << "*D_NET " << n.name << ' ' << n.lcap << '\n';
+  if(not n.connections.empty()){
+    os << "*CONN\n";
+  }
+  for(const auto& c: n.connections){
+    os << c << '\n';
+  }
+  if(not n.caps.empty()){
+    os << "*CAP\n";
+  }
+  for(const auto& c: n.caps){
+    os << std::get<0>(c);
+    if(not std::get<1>(c).empty()){
+      os << ' ' << std::get<1>(c);
+    }
+    os << ' ' << std::get<2>(c) << '\n';
+  }
+  if(not n.ress.empty()){
+    os << "*RES\n";
+  }
+  for(const auto& r: n.ress){
+    os << std::get<0>(r) << ' ' << std::get<1>(r) << ' ' << std::get<2>(r) << '\n';
+  }
+  return os;  
+}
 
 
 
@@ -343,15 +386,18 @@ inline void Data::show(){
     << "R Unit:" << r_unit << "\n"
     << "L Unit:" << l_unit << "\n"
   ;
+  std::cout << '\n';
   std::cout << "*NAME_MAP\n";
   for(const auto& [k,v]: name_map){
     std::cout << k << ' ' << v << '\n';
   }
+  std::cout << '\n';
   for(const auto& [k,v]: ports){
-    std::cout << "PORT[" << k << "] " << v;
+    std::cout << "PORT[" << k << "] \n" << v << '\n';
   }
+  std::cout << '\n';
   for(const auto& [k,v]: nets){
-    std::cout << "NET[" << k << "] " << '\n';
+    std::cout << "NET[" << k << "] \n" <<  v << '\n';
   }
 }
 
@@ -452,7 +498,7 @@ struct action<Header>
   template <typename Input>
   static void apply(const Input& in, Data& d){
     auto str {in.string()};
-    std::cout << "H = " << str << std::endl;
+    //std::cout << "Header = " << str << std::endl;
     d.add_header(str);
   };
 };
@@ -872,6 +918,7 @@ struct action<rule_net_beg>
 
     d.nets.insert({vec[1], {}});
     auto &n = d.nets.at(vec[1]);
+    n.name = vec[1];
     n.lcap = std::stof(vec[2]);
     std::swap(d.current_net, vec[1]);
   }

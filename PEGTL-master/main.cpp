@@ -58,6 +58,8 @@ namespace hello
 int main(int argc, char* argv[]){
   //std::ifstream ifs("/home/clin99/Software/spirit/aes_cipher_top.spef");
   std::ifstream ifs("./simple.spef");
+  bool show {false};
+  show = true;
 
   ifs.seekg(0, std::ios::end);
   size_t size = ifs.tellg();
@@ -98,7 +100,9 @@ int main(int argc, char* argv[]){
     try{
       tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
       std::cout << "\n\n\n";
-      data.show();
+      if(show){
+        data.show();
+      }
     }
     catch(const std::exception& e){
       std::cout << "PARSE FAILED WITH EXCEPTION: " << e.what() << std::endl;

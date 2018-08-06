@@ -519,7 +519,6 @@ struct action<SpefDivider>
   };
 };
 
-
 struct SpefDelimiter: pegtl::any
 {};
 template<>
@@ -594,9 +593,9 @@ struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), p
 struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
 {};
 
-struct rule_unit: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,TAO_PEGTL_STRING("_UNIT"), 
-  pegtl::plus<pegtl::space>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>, 
-  pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
+struct rule_unit: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,
+  TAO_PEGTL_STRING("_UNIT"), pegtl::plus<pegtl::space>, pegtl::plus<pegtl::digit>, 
+  pegtl::plus<pegtl::space>, pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
   pegtl::sor<TAO_PEGTL_STRING("HENRY"), TAO_PEGTL_STRING("OHM"), pegtl::one<'S','F','H'>>>
 {};
 template <>
@@ -738,9 +737,7 @@ struct action<rule_port>
 
 
 
-struct rule_conn_beg: pegtl::seq<
-  pegtl::bol, TAO_PEGTL_STRING("*CONN")
->
+struct rule_conn_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*CONN")>
 {};
 template <>
 struct action<rule_conn_beg>
@@ -813,9 +810,7 @@ struct action<rule_conn>
 
 
 
-struct rule_cap_beg: pegtl::seq<
-  pegtl::bol, TAO_PEGTL_STRING("*CAP")
->
+struct rule_cap_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*CAP")>
 {};
 template <>
 struct action<rule_cap_beg>
@@ -868,9 +863,7 @@ struct action<rule_cap_couple>
 
 
 
-struct rule_res_beg: pegtl::seq<
-  pegtl::bol, TAO_PEGTL_STRING("*RES")
->
+struct rule_res_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*RES")>
 {};
 template <>
 struct action<rule_res_beg>
@@ -953,10 +946,7 @@ struct rule_spef: pegtl::must<
   rule_divider,
   rule_delimiter,
   rule_bus_delimiter,
-  rule_unit, DontCare,
-  rule_unit, DontCare,
-  rule_unit, DontCare,
-  rule_unit, DontCare,
+  pegtl::rep_max<4, pegtl::seq<rule_unit, DontCare>>,
   rule_name_map_beg,
   pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
   rule_port_beg,

@@ -588,14 +588,14 @@ struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"),
   pegtl::plus<pegtl::space>, SpefDivider, DontCare>
 {};
 
-struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::blank>, SpefDelimiter, DontCare>
+struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, DontCare>
 {};
 
-struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::blank>, SpefBusDelimiter, DontCare>
+struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
 {};
 
 struct rule_unit: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,TAO_PEGTL_STRING("_UNIT"), 
-  pegtl::plus<pegtl::blank>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::blank>, 
+  pegtl::plus<pegtl::space>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>, 
   pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
   pegtl::sor<TAO_PEGTL_STRING("HENRY"), TAO_PEGTL_STRING("OHM"), pegtl::one<'S','F','H'>>>
 {};
@@ -646,8 +646,8 @@ struct action<rule_name_map_beg>
 
 struct rule_name_map: pegtl::seq<
   pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, TAO_PEGTL_STRING("*"),
-  pegtl::until<pegtl::at<pegtl::blank>>,
-  pegtl::plus<pegtl::blank>,
+  pegtl::until<pegtl::at<pegtl::space>>,
+  pegtl::plus<pegtl::space>,
   pegtl::until<pegtl::at<pegtl::space>>
 >
 {};
@@ -676,16 +676,18 @@ struct action<rule_port_beg>
 
 struct rule_port: pegtl::seq<
   pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
-  pegtl::until<pegtl::at<pegtl::blank>>, 
-  pegtl::blank,
+  pegtl::until<pegtl::at<pegtl::space>>, 
+  pegtl::plus<pegtl::space>,
   pegtl::must<pegtl::one<'I','O','B'>>,
   pegtl::opt<
     pegtl::seq<
-      pegtl::blank,
+      pegtl::plus<pegtl::space>,
       pegtl::sor<
-        pegtl::seq<TAO_PEGTL_STRING("*C"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>,
-        pegtl::seq<TAO_PEGTL_STRING("*L"), pegtl::blank, double_::rule>,
-        pegtl::seq<TAO_PEGTL_STRING("*S"), pegtl::blank, double_::rule, pegtl::blank, double_::rule>
+        pegtl::seq<TAO_PEGTL_STRING("*C"), pegtl::plus<pegtl::space>, double_::rule, 
+          pegtl::plus<pegtl::space>, double_::rule>,
+        pegtl::seq<TAO_PEGTL_STRING("*L"), pegtl::plus<pegtl::space>, double_::rule>,
+        pegtl::seq<TAO_PEGTL_STRING("*S"), pegtl::plus<pegtl::space>, double_::rule, 
+          pegtl::plus<pegtl::space>, double_::rule>
       >
     >
   >
@@ -904,8 +906,8 @@ struct action<rule_res>
 
 struct rule_net_beg: pegtl::seq<
   pegtl::bol, TAO_PEGTL_STRING("*D_NET"),
-  pegtl::blank, pegtl::until<pegtl::at<pegtl::blank>>,
-  pegtl::blank, double_::rule
+  pegtl::plus<pegtl::space>, pegtl::until<pegtl::at<pegtl::space>>,
+  pegtl::plus<pegtl::space>, double_::rule
 >
 {};
 template <>

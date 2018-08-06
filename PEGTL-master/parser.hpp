@@ -19,41 +19,14 @@
 #include <cctype>
 #include <regex>
 #include <string_view>
+#include <optional>
 
 namespace spef{
 
 
 // ------------------------------------------------------------------------------------------------ 
 /*
-enum class ConnectionType {
-  INTERNAL,
-  EXTERNAL
-};
 
-std::string to_string(ConnectionType);
-
-enum class ConnectionDirection {
-  INPUT,
-  OUTPUT,
-  INOUT
-};
-
-std::string to_string(ConnectionDirection);
-
-// Struct: Connection
-struct Connection {
-
-  std::string name;
-  ConnectionType type;
-  ConnectionDirection direction;
-
-  Connection(const std::string&, ConnectionType, ConnectionDirection);
-
-  Connection() = default;
-  Connection(Connection&&) = default;
-
-  Connection& operator = (Connection&&) = default;
-};
 
 // ------------------------------------------------------------------------------------------------
 
@@ -222,6 +195,11 @@ struct Connection {
   ConnectionType type;
   ConnectionDirection direction;
 
+  std::optional<std::pair<double, double>> coordinate;
+  std::optional<double> load;    
+  std::optional<std::string> driving_cell;
+
+
   //Connection(const std::string&, ConnectionType, ConnectionDirection);
 
   Connection() = default;
@@ -302,7 +280,7 @@ struct Data{
 
   std::string current_net;
 
-  void add_header(std::string&&);
+  void add_header(const std::string&);
 
   void show();
 };
@@ -336,7 +314,7 @@ inline void Data::show(){
   }
 }
 
-inline void Data::add_header(std::string&& s){
+inline void Data::add_header(const std::string& s){
   switch(state){
     case State::NONE:
       standard = s;
@@ -396,20 +374,45 @@ struct action: pegtl::nothing<T>
 
 
 
+//struct Comment: pegtl::must<TAO_PEGTL_KEYWORD("//"), pegtl::until<pegtl::eol>>
+struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
+{};
+
+//struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
+//struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, Comment>>
+struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, pegtl::eof>>
+{};
+
+
 
 struct Quote: pegtl::string<'"'>
 {};
 //struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::not_at<Quote>, pegtl::any>, Quote>
-struct QuotedString: pegtl::must<Quote, pegtl::until<Quote>>
+struct QuotedString: pegtl::seq<Quote, pegtl::until<Quote>>
 //struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::alpha>, Quote>
 {};
+//template<>
+//struct action<QuotedString>  
+//{
+//  template <typename Input>
+//  static void apply(const Input& in, Data& d){
+//    auto str {in.string()};
+//    d.add_header(str);
+//    //d.add_header(str.substr(1, str.size()-2));
+//  };
+//};
+
+
+struct Header: pegtl::plus<pegtl::seq<DontCare, QuotedString>>
+{};
 template<>
-struct action<QuotedString>  
+struct action<Header>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
     auto str {in.string()};
-    d.add_header(str.substr(1, str.size()-2));
+    std::cout << "H = " << str << std::endl;
+    d.add_header(str);
   };
 };
 
@@ -460,38 +463,42 @@ struct action<SpefBusDelimiter>
 
 
 
-//struct Comment: pegtl::must<TAO_PEGTL_KEYWORD("//"), pegtl::until<pegtl::eol>>
-struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
+
+
+//  Header Section --------------------------------------------------------------------------------
+
+struct rule_standard: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*SPEF"), 
+  Header, DontCare>
+  //pegtl::plus<pegtl::seq<DontCare, QuotedString>>, DontCare> 
+  //pegtl::plus<pegtl::blank>, QuotedString, DontCare>
 {};
 
-//struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
-//struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, Comment>>
-struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, pegtl::eof>>
+struct rule_design: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN"), 
+  Header, DontCare>
 {};
 
-struct rule_standard: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*SPEF"), pegtl::plus<pegtl::blank>, QuotedString, DontCare> 
+struct rule_date: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DATE"), 
+  Header, DontCare>
 {};
 
-struct rule_design: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
+struct rule_vendor: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VENDOR"), 
+  Header, DontCare>
 {};
 
-struct rule_date: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DATE"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
+struct rule_program: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PROGRAM"), 
+  Header, DontCare>
 {};
 
-struct rule_vendor: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VENDOR"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
+struct rule_version: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VERSION"), 
+  Header, DontCare>
 {};
 
-struct rule_program: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PROGRAM"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
+struct rule_design_flow: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN_FLOW"), 
+  Header, DontCare>
 {};
 
-struct rule_version: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VERSION"), pegtl::plus<pegtl::blank>, QuotedString, DontCare>
-{};
-
-struct rule_design_flow: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN_FLOW"), pegtl::plus<pegtl::blank>, 
-  QuotedString, DontCare>
-{};
-
-struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"), pegtl::plus<pegtl::blank>, SpefDivider, DontCare>
+struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"), 
+  pegtl::plus<pegtl::space>, SpefDivider, DontCare>
 {};
 
 struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::blank>, SpefDelimiter, DontCare>
@@ -501,8 +508,9 @@ struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMI
 {};
 
 struct rule_unit: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,TAO_PEGTL_STRING("_UNIT"), 
-  pegtl::plus<pegtl::blank>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::blank>, pegtl::one<'K','M','U','N','P','F'>, 
-  pegtl::sor<pegtl::one<'S','F','H'>, TAO_PEGTL_STRING("OHM")>>
+  pegtl::plus<pegtl::blank>, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::blank>, 
+  pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
+  pegtl::sor<TAO_PEGTL_STRING("HENRY"), TAO_PEGTL_STRING("OHM"), pegtl::one<'S','F','H'>>>
 {};
 template <>
 struct action<rule_unit>  
@@ -512,18 +520,23 @@ struct action<rule_unit>
     std::string str {in.string()};
     auto vec = split_on_space(str);
 
+    double scale {1.0};
+    if(vec[2].size() > 1 and d.scale.find(vec[2][0]) != d.scale.end()){
+      scale = d.scale.at(vec[2][0]);
+    }
+
     switch(vec[0][1]){
       case 'T':
-        d.t_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        d.t_unit = std::stod(vec[1])*scale;
         break;
       case 'C':
-        d.c_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        d.c_unit = std::stod(vec[1])*scale;
         break;
       case 'R':
-        d.r_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        d.r_unit = std::stod(vec[1])*scale;
         break;
       case 'L':
-        d.l_unit = std::stod(vec[1])*d.scale.at(vec[2][0]);
+        d.l_unit = std::stod(vec[1])*scale;
         break;
       default:
         break;
@@ -653,10 +666,13 @@ struct rule_conn: pegtl::seq<
   pegtl::bol, pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, pegtl::plus<pegtl::space>,
   pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
   pegtl::must<pegtl::one<'I','O','B'>>, 
+
   pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*C"), 
   pegtl::plus<pegtl::space>, double_::rule, pegtl::plus<pegtl::space>, double_::rule>>,
+
   pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*L"), 
   pegtl::plus<pegtl::space>, double_::rule>>,
+
   pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*D"), 
   pegtl::plus<pegtl::space>, pegtl::plus<pegtl::identifier_other>>>
 >
@@ -666,6 +682,42 @@ struct action<rule_conn>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    auto &n = d.nets.at(d.current_net);
+    auto &c = n.connections.emplace_back();
+
+    auto vec = split_on_space(in.string());
+    c.type = vec[0][1] == 'P' ? ConnectionType::EXTERNAL : ConnectionType::INTERNAL;
+    c.name = vec[1];
+    switch(vec[2][0]){
+      case 'I':
+        c.direction = ConnectionDirection::INPUT;
+        break;
+      case 'O':
+        c.direction = ConnectionDirection::OUTPUT;
+        break;
+      default:
+        c.direction = ConnectionDirection::INOUT;
+        break;
+    }
+
+    for(size_t i=3; i<vec.size(); i++){
+      if(vec[i].compare("*C") == 0){
+        c.coordinate = std::make_pair(std::stod(vec[i+1]), std::stod(vec[i+2]));
+        i += 2;
+      }
+      else if(vec[i].compare("*L") == 0){
+        c.load = std::stod(vec[i+1]);
+        i += 1;
+      }
+      else if(vec[i].compare("*D") == 0){
+        c.driving_cell = vec[i+1];
+        i += 1;
+      }
+      else{
+        std::cout << "Unknown connection information!\n";
+      }
+    }
+
     std::cout << "Conn : " << in.string() << '\n';
   }
 };
@@ -795,7 +847,7 @@ struct action<rule_net_end>
 
 //-------------------------------------------------------------------------------------------------
 struct rule_spef: pegtl::seq<
-  rule_standard, 
+  rule_standard,
   rule_design, 
   rule_date, 
   rule_vendor,

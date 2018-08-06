@@ -57,6 +57,7 @@ namespace hello
 
 int main(int argc, char* argv[]){
   std::ifstream ifs("./simple.spef");
+
   ifs.seekg(0, std::ios::end);
   size_t size = ifs.tellg();
   std::string buffer(size, ' ');

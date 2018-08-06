@@ -56,6 +56,7 @@ namespace hello
 
 
 int main(int argc, char* argv[]){
+  //std::ifstream ifs("/home/clin99/Software/spirit/aes_cipher_top.spef");
   std::ifstream ifs("./simple.spef");
 
   ifs.seekg(0, std::ios::end);
@@ -81,17 +82,6 @@ int main(int argc, char* argv[]){
   //std::cout << buffer << '\n';
   //exit(1);
 
-  std::string name;
-  std::string design;
-  std::string date;
-  std::string vendor;
-  std::string program;
-  std::string version;
-  std::string design_flow;
-  char divider;
-  char delimiter;
-  char suffix_delim;
-  char postfix_delim;
 
   //{
   //  spef::Data data;
@@ -105,10 +95,15 @@ int main(int argc, char* argv[]){
   { 
     spef::Data data;
     tao::pegtl::memory_input<> in(buffer, "");
-    tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
+    try{
+      tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
+      std::cout << "\n\n\n";
+      data.show();
+    }
+    catch(const std::exception& e){
+      std::cout << "PARSE FAILED WITH EXCEPTION: " << e.what() << std::endl;
+    }
 
-    std::cout << "\n\n\n";
-    data.show();
   }
 
 
@@ -130,32 +125,5 @@ int main(int argc, char* argv[]){
   //}
   
 
-
-
-
   return 0;
-
-
-  //std::cout << "Parse success? " << std::boolalpha << ret << '\n' << '\n';
-
-  std::cout << name << "\n";
-  std::cout << design << "\n";
-  std::cout << date << "\n";
-  std::cout << vendor << "\n";
-  std::cout << program << "\n";
-  std::cout << version << "\n";
-  std::cout << design_flow << "\n";
-  std::cout << divider << "\n";
-  std::cout << delimiter << "\n";
-  std::cout << suffix_delim << postfix_delim << "\n";
-  //std::cout << t_unit << "\n";
-  //std::cout << c_unit << "\n";
-  //std::cout << r_unit << "\n";
-  //std::cout << l_unit << "\n";
-
-  //for(const auto& [k, v]: name_map){
-  //  std::cout << k << ' ' << v << '\n';
-  //}
-
-
 }

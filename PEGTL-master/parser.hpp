@@ -147,12 +147,33 @@ enum class ConnectionType {
   EXTERNAL
 };
 
+std::ostream& operator<<(std::ostream& os, const ConnectionType& c)
+{
+	switch(c){
+    case ConnectionType::INTERNAL: os << "INTERNAL";    break;
+    case ConnectionType::EXTERNAL: os << "EXTERNAL";    break;
+		default    : os.setstate(std::ios_base::failbit);
+	}
+	return os;
+}
+
 
 enum class ConnectionDirection {
   INPUT,
   OUTPUT,
   INOUT
 };
+
+std::ostream& operator<<(std::ostream& os, const ConnectionDirection& c)
+{
+	switch(c){
+    case ConnectionDirection::INPUT  : os << "INPUT";     break;
+    case ConnectionDirection::OUTPUT : os << "OUTPUT";    break;
+    case ConnectionDirection::INOUT  : os << "INOUT";     break;
+		default    : os.setstate(std::ios_base::failbit);
+	}
+	return os;
+}
 
 
 struct Port{
@@ -198,7 +219,6 @@ struct Connection {
   std::optional<std::pair<double, double>> coordinate;
   std::optional<double> load;    
   std::optional<std::string> driving_cell;
-
 
   //Connection(const std::string&, ConnectionType, ConnectionDirection);
 
@@ -246,6 +266,27 @@ enum class State{
   PORTS
 };
 
+std::ostream& operator<<(std::ostream& os, const State& s)
+{
+	switch(s){
+    case State::NONE           : os << "NONE";           break;
+    case State::STANDARD       : os << "STANDARD";       break;
+    case State::DESIGN_NAME    : os << "DESIGN_NAME";    break;
+    case State::DATE           : os << "DATE";           break;
+    case State::VENDOR         : os << "VENDOR";         break;
+    case State::PROGRAM        : os << "PROGRAM";        break;
+    case State::VERSION        : os << "VERSION";        break;
+    case State::DESIGN_FLOW    : os << "DESIGN_FLOW";    break;
+    case State::DIVIDER        : os << "DIVIDER";        break;
+    case State::DELIMITER      : os << "DELIMITER";      break;
+    case State::BUS_DELIMITER  : os << "BUS_DELIMITER";  break;
+    case State::NAME_MAP       : os << "NAME_MAP";       break;
+    case State::PORTS          : os << "PORTS";          break;
+	  default             : os.setstate(std::ios_base::failbit);
+	}
+	return os;
+}
+ 
 
 struct Data{
   State state {State::NONE};
@@ -287,20 +328,20 @@ struct Data{
 
 inline void Data::show(){
   std::cout 
-    << "Standard: " << standard << "\n" 
-    << "Design name: " << design_name << "\n" 
-    << "Date: " << date << "\n" 
-    << "Vendor: " << vendor << "\n"
-    << "Program: " << program << "\n"
-    << "Version: " << version << "\n"
-    << "Design Flow: " << design_flow << "\n"
-    << "Divider: " << divider << "\n"
-    << "Delimiter: " << delimiter << "\n"
-    << "Bus Delimiter: " << bus_delimiter << "\n"
-    << "T Unit: " << t_unit << "\n"
-    << "C Unit: " << c_unit << "\n"
-    << "R Unit: " << r_unit << "\n"
-    << "L Unit: " << l_unit << "\n"
+    << "Standard:" << standard << "\n" 
+    << "Design name:" << design_name << "\n" 
+    << "Date:" << date << "\n" 
+    << "Vendor:" << vendor << "\n"
+    << "Program:" << program << "\n"
+    << "Version:" << version << "\n"
+    << "Design Flow:" << design_flow << "\n"
+    << "Divider:" << divider << "\n"
+    << "Delimiter:" << delimiter << "\n"
+    << "Bus Delimiter:" << bus_delimiter << "\n"
+    << "T Unit:" << t_unit << "\n"
+    << "C Unit:" << c_unit << "\n"
+    << "R Unit:" << r_unit << "\n"
+    << "L Unit:" << l_unit << "\n"
   ;
   std::cout << "*NAME_MAP\n";
   for(const auto& [k,v]: name_map){
@@ -733,7 +774,7 @@ struct action<rule_cap_beg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "CAP begin\n";
+    //std::cout << "CAP begin\n";
   }
 };
 
@@ -837,16 +878,14 @@ struct action<rule_net_beg>
 };
 
 
-struct rule_net_end: pegtl::seq<
-  pegtl::bol, TAO_PEGTL_STRING("*END")
->
+struct rule_net_end: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*END")>
 {};
 template <>
 struct action<rule_net_end>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    std::cout << "*END\n\n";
+    //std::cout << "*END\n\n";
   }
 };
 
@@ -854,7 +893,7 @@ struct action<rule_net_end>
 
 
 //-------------------------------------------------------------------------------------------------
-struct rule_spef: pegtl::seq<
+struct rule_spef: pegtl::must<
   rule_standard,
   rule_design, 
   rule_date, 
@@ -884,6 +923,19 @@ struct rule_spef: pegtl::seq<
 >
 {};
 
+template<typename Rule>
+struct my_control : tao::pegtl::normal<Rule>
+{
+   static const std::string error_message;
+
+   template< typename Input, typename... States >
+   static void raise(const Input& in, States&&...)
+   {
+      throw tao::pegtl::parse_error(error_message, in);
+   }
+};
+
+template<> const std::string my_control<rule_spef>::error_message = "Rule spef parse error!";
 
 };    // end of namespace spef. --------------------------------------------------------------------
 

@@ -387,7 +387,9 @@ inline void Data::show(){
     << "L Unit:" << l_unit << "\n"
   ;
   std::cout << '\n';
-  std::cout << "*NAME_MAP\n";
+  if(not name_map.empty()){
+    std::cout << "*NAME_MAP\n";
+  }
   for(const auto& [k,v]: name_map){
     std::cout << k << ' ' << v << '\n';
   }
@@ -632,7 +634,7 @@ struct action<rule_unit>
 };
 
 
-struct rule_name_map_beg: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*NAME_MAP"), DontCare>
+struct rule_name_map_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*NAME_MAP"), DontCare>
 {};
 template <>
 struct action<rule_name_map_beg>  
@@ -947,10 +949,8 @@ struct rule_spef: pegtl::must<
   rule_delimiter,
   rule_bus_delimiter,
   pegtl::rep_max<4, pegtl::seq<rule_unit, DontCare>>,
-  rule_name_map_beg,
-  pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
-  rule_port_beg,
-  pegtl::plus<pegtl::seq<rule_port, DontCare>>,
+  pegtl::opt<rule_name_map_beg, pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>>,
+  rule_port_beg, pegtl::plus<pegtl::seq<rule_port, DontCare>>,
   pegtl::star<
     rule_net_beg, DontCare,
     pegtl::if_must<pegtl::seq<rule_conn_beg, DontCare>, pegtl::plus<pegtl::seq<rule_conn, DontCare>>>,

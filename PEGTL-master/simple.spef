@@ -34,10 +34,10 @@
 // This is comment 5
 
 
-*NAME_MAP  
+*NAME_MAP   
 
 *509 F_C_EP2
-*510 F_A_EP2
+//*510 F_A_EP2
 
 *PORTS
 

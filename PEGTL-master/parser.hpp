@@ -69,37 +69,39 @@ namespace double_
 };
 
 static const bool disable = false;
-/*inline std::vector<std::string> split_on_space(const std::string& s){
-  //const static std::regex ws_re {"\\s+"};
-  //return std::vector<std::string>(std::sregex_token_iterator(s.begin(), s.end(), ws_re, -1), {});
 
-  std::vector<std::string> v;
-  size_t b {0};
-  size_t e {0};
-  while(e < s.size()){
-    while(e < s.size() and not std::isspace(s[e])){
-      e++;
-    }   
-    v.emplace_back(s.substr(b, e-b));
-    b = e + 1;
-    while(b < s.size() and std::isspace(s[b])){
-      b++;
-    }   
-    e = b;  
-  }
-  return v;
-}*/
 
 // TODO:
-//void split_on_space(
-//  const char* beg,
-//  const char* end,  
-//  std::vector<std::string_view>&
-//) {
-//  tokens.clear();
-//}
+void split_on_space(
+  const char* beg,
+  const char* end,  
+  std::vector<std::string_view>& tokens
+) {
 
-// Function: split_on_space
+  tokens.clear();
+  size_t len {0};
+  const char* itr {beg};
+  while(itr != end and *itr != 0){
+    if(std::isspace(*itr)) {
+      // Consume space
+      while(++itr != end and *itr != 0 and std::isspace(*itr)){
+      }
+    }
+    else{
+      len = 1;
+      // Consume non-space
+      while(itr != end and *itr != 0 and not std::isspace(*itr)){
+        itr ++;
+        len ++;
+      }
+      tokens.push_back({itr-len+1, len});
+    }
+  }
+}
+
+
+// Function: split_on_space 
+/*
 std::vector<std::string_view>& split_on_space(const char* beg, const char* end) {
 
   // Parse the token.
@@ -130,19 +132,9 @@ std::vector<std::string_view>& split_on_space(const char* beg, const char* end) 
 	
   return tokens;
 }
+*/
 
 
-//inline std::vector<std::string_view> split_on_space(std::string_view s){
-//  const static std::regex ws_re {"\\s+"};
-//  const static std::regex_token_iterator<std::string_view::iterator> end_of_buf;
-//  std::regex_token_iterator<std::string_view::iterator> iter(s.begin(), s.end(), ws_re, -1);
-//  std::vector<std::string_view> vec;
-//  while(iter != end_of_buf){
-//    vec.emplace_back(iter->str());
-//    iter ++;
-//  }
-//  return vec;
-//}
 
 
 
@@ -371,12 +363,15 @@ struct Data{
   std::unordered_map<std::string, Port> ports;
   std::unordered_map<std::string, Net> nets;
 
-  // TODO: change to iterator  
-  std::unordered_map<std::string, Net>::iterator current_net;
 
   void add_header(const std::string&);
 
   std::string dump() const;
+
+  template <typename T>
+  friend struct action;
+
+  friend void split_on_space(const char*, const char*, std::vector<std::string_view>&);
 
   private:
     
@@ -638,11 +633,11 @@ struct action<rule_unit>
   static bool apply(const Input& in, Data& d){
     if(disable)
       return true; 
-    //std::string str {in.string()};
+
     //auto vec = split_on_space(str);
 
     //auto& vec = split_on_space(in.begin(), in.end());
-    split_on_space(in.begin(), in.end());
+    split_on_space(in.begin(), in.end(), d._tokens);
 
     return true;
 
@@ -686,7 +681,6 @@ struct action<rule_name_map_beg>
 };
 
 struct rule_name_map: pegtl::seq<
-  // TODO : , TAO_PEGTL_STRING("*D_NET")
   pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, 
   TAO_PEGTL_STRING("*"), token, delimiter, token
 >
@@ -698,9 +692,9 @@ struct action<rule_name_map>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ;
-    auto& vec = split_on_space(in.begin(), in.end()); 
+    split_on_space(in.begin(), in.end(), d._tokens); 
     //d.name_map.insert({vec[0], vec[1]});
-    d.name_map.try_emplace( std::string{vec[0]}, std::string{vec[1]} );
+    d.name_map.try_emplace( std::string{d._tokens[0]}, std::string{d._tokens[1]} );
   }
 };
 
@@ -742,18 +736,18 @@ struct action<rule_port>
   static bool apply(const Input& in, Data& d){
     if(disable)
       return true; 
-    //std::string str {in.string()};
-    auto& vec = split_on_space(in.begin(), in.end()); 
+
+    split_on_space(in.begin(), in.end(), d._tokens); 
     //d.ports.insert({vec[0], {}});
     //auto& p = d.ports.at(vec[0]);
 
-    auto& p = d.ports[std::string{vec[0]}];
+    auto& p = d.ports[std::string{d._tokens[0]}];
 
     // Set up name 
-    p.name = vec[0];
+    p.name = d._tokens[0];
 
     // Set up port direction
-    switch(vec[1][0]){
+    switch(d._tokens[1][0]){
       case 'O':
         p.direction = ConnectionDirection::OUTPUT;
         break;
@@ -770,13 +764,13 @@ struct action<rule_port>
     }
 
     // Set up type 
-    if(vec.size() > 2){
-      p.type = vec[2][1];
+    if(d._tokens.size() > 2){
+      p.type = d._tokens[2][1];
     }
 
     // Insert values
-    for(size_t i=3; i<vec.size(); i++){
-      p.values.emplace_back(std::atof(vec[i].data()));
+    for(size_t i=3; i<d._tokens.size(); i++){
+      p.values.emplace_back(std::strtof(d._tokens[i].data(), nullptr));
     }
     return true;
   }
@@ -791,14 +785,10 @@ struct action<rule_conn_beg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    //std::cout << "Conn begin\n";
   }
 };
 
 
-// TODO: alias keword
-// using token = pegtl::until<pegtl::at<pegtl::space>>
-// using delimiter = pegtl::plus<pegtl::space>
 struct rule_conn: pegtl::seq<
   pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, 
   delimiter, token, delimiter, pegtl::must<pegtl::one<'I','O','B'>>, 
@@ -820,15 +810,13 @@ struct action<rule_conn>
     if(disable)
       return ;
 
-    //std::cout << "Conn : " << in.string() << '\n';
-    auto &n = d.current_net->second; 
-    auto &c = n.connections.emplace_back();
+    auto &c = d._current_net->connections.emplace_back();
 
-    auto& vec = split_on_space(in.begin(), in.end());
+    split_on_space(in.begin(), in.end(), d._tokens);
 
-    c.type = vec[0][1] == 'P' ? ConnectionType::EXTERNAL : ConnectionType::INTERNAL;
-    c.name = vec[1];
-    switch(vec[2][0]){
+    c.type = d._tokens[0][1] == 'P' ? ConnectionType::EXTERNAL : ConnectionType::INTERNAL;
+    c.name = d._tokens[1];
+    switch(d._tokens[2][0]){
       case 'I':
         c.direction = ConnectionDirection::INPUT;
         break;
@@ -840,17 +828,19 @@ struct action<rule_conn>
         break;
     }
 
-    for(size_t i=3; i<vec.size(); i++){
-      if(vec[i].compare("*C") == 0){
-        c.coordinate = std::make_pair(std::atof(vec[i+1].data()), std::atof(vec[i+2].data()));
+    for(size_t i=3; i<d._tokens.size(); i++){
+      if(d._tokens[i].compare("*C") == 0){
+        c.coordinate = std::make_pair(
+          std::strtof(d._tokens[i+1].data(), nullptr), std::strtof(d._tokens[i+2].data(), nullptr)
+        );
         i += 2;
       }
-      else if(vec[i].compare("*L") == 0){
-        c.load = std::atof(vec[i+1].data());
+      else if(d._tokens[i].compare("*L") == 0){
+        c.load = std::strtof(d._tokens[i+1].data(), nullptr);
         i += 1;
       }
-      else if(vec[i].compare("*D") == 0){
-        c.driving_cell = vec[i+1];
+      else if(d._tokens[i].compare("*D") == 0){
+        c.driving_cell = d._tokens[i+1];
         i += 1;
       }
       else{
@@ -885,11 +875,12 @@ struct action<rule_cap_ground>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ; 
-    //std::cout << "CAP GROUND =" << in.string() << '\n';
-    auto& vec = split_on_space(in.begin(), in.end());
-    auto &n = d.current_net->second; 
+
+    split_on_space(in.begin(), in.end(), d._tokens);
     // TODO: verify...?
-    n.caps.emplace_back(std::forward_as_tuple(vec[1], "", std::atof(vec[2].data())));
+    d._current_net->caps.emplace_back(
+      std::forward_as_tuple(d._tokens[1], "", std::strtof(d._tokens[2].data(), nullptr))
+    );
   }
 };
 
@@ -905,10 +896,10 @@ struct action<rule_cap_couple>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ; 
-    //std::cout << "CAP COUPLE =" << in.string() << '\n';
-    auto& vec = split_on_space(in.begin(), in.end());
-    auto &n = d.current_net->second; 
-    n.caps.emplace_back(std::forward_as_tuple(vec[1], vec[2], std::atof(vec[3].data())));
+    split_on_space(in.begin(), in.end(), d._tokens);
+    d._current_net->caps.emplace_back(
+      std::forward_as_tuple(d._tokens[1], d._tokens[2], std::strtof(d._tokens[3].data(), nullptr))
+    );
   }
 };
 
@@ -935,10 +926,11 @@ struct action<rule_res>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ; 
-    //std::cout << "RES =" << in.string() << '\n';
-    auto& vec = split_on_space(in.begin(), in.end());
-    auto &n = d.current_net->second; 
-    n.ress.emplace_back(std::forward_as_tuple(vec[1], vec[2], std::atof(vec[3].data())));
+
+    split_on_space(in.begin(), in.end(), d._tokens);
+    d._current_net->ress.emplace_back(
+      std::forward_as_tuple(d._tokens[1], d._tokens[2], std::strtof(d._tokens[3].data(), nullptr))
+    );
   }
 };
 
@@ -957,15 +949,16 @@ struct action<rule_net_beg>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ; 
-    auto& vec = split_on_space(in.begin(), in.end()); 
+    split_on_space(in.begin(), in.end(), d._tokens);
     
     // TODO: replace current_net with raw pointer?
     // d._current_net = &(d.nets[std::string{vec[1]}]);
-    d.current_net = d.nets.insert({std::string{vec[1]}, {}}).first;
+    d._current_net = &(d.nets[{std::string{d._tokens[1]}}]);
+    //d.current_net = d.nets.insert({std::string{vec[1]}, {}}).first;
     //d.current_net = d.nets.try_emplace(std::string{vec[1]}, {}).first;
 
-    d.current_net->second.name = vec[1];
-    d.current_net->second.lcap = std::atof(vec[2].data());
+    d._current_net->name = d._tokens[1];
+    d._current_net->lcap = std::strtof(d._tokens[2].data(), nullptr);
   }
 };
 
@@ -1008,7 +1001,6 @@ struct rule_spef: pegtl::must<
   >
 >
 {};
-
 
 
 

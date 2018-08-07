@@ -12,9 +12,19 @@ namespace std {
 
 int main(int argc, char* argv[]){
 
-  //std::string str = "\ta b c d \n";
+  //std::vector<std::string_view> sv;
+  //std::string str = "\ta b c \t\r \t d \n";
+  ////std::string str = "\t\n";
+  //spef::split_on_space(str.data(), str.data()+str.size(), sv);
 
-  //char str[] = "1234";
+  ////char str[] = "  \t aba \r \v1234 awerwr \t\r \t";
+  ////spef::split_on_space(str, str+sizeof(str), sv);
+
+  //for(auto s: sv){
+  //  std::cout << "=" << s << "=\n";
+  //}
+
+  //return 0;
 
   if(argc != 2){
     std::cout << "Insufficient argument!\n";

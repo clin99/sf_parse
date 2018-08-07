@@ -2,64 +2,29 @@
 
 #include <fstream>
 #include <typeinfo>
-
+#include <experimental/filesystem>
 
 namespace pegtl = tao::pegtl;
-namespace hello
-{
-   // Parsing rule that matches a literal "Hello, ".
 
-   struct prefix
-      : pegtl::string< 'H', 'e', 'l', 'l', 'o', ',', ' ' >
-   {};
-
-   // Parsing rule that matches a non-empty sequence of
-   // alphabetic ascii-characters with greedy-matching.
-
-   struct name
-      : pegtl::plus< pegtl::alpha >
-   {};
-
-   // Parsing rule that matches a sequence of the 'prefix'
-   // rule, the 'name' rule, a literal "!", and 'eof'
-   // (end-of-file/input), and that throws an exception
-   // on failure.
-
-   struct grammar
-      : pegtl::must< prefix, name, pegtl::one< '!' >, pegtl::eof >
-   {};
-
-   // Class template for user-defined actions that does
-   // nothing by default.
-
-   template< typename Rule >
-   struct action
-      : pegtl::nothing< Rule >
-   {};
-
-   // Specialisation of the user-defined action to do
-   // something when the 'name' rule succeeds; is called
-   // with the portion of the input that matched the rule.
-
-   template<>
-   struct action< name >
-   {
-      template< typename Input >
-      static void apply( const Input& in, std::string& v )
-      {
-         v = in.string();
-      }
-   };
-
-}  // namespace hello
-
-
+namespace std {
+  namespace filesystem = experimental::filesystem;
+};
 
 int main(int argc, char* argv[]){
+  if(argc != 2){
+    std::cout << "Insufficient argument!\n";
+    return 1;
+  }
+  if(not std::filesystem::exists(argv[1])){
+    std::cout << "file not exists!\n";
+    return 1;
+  }
+
   bool show {false};
-  std::ifstream ifs("/home/clin99/Software/OpenTimer/benchmark/vga_lcd/vga_lcd.spef");
+  //std::ifstream ifs("/home/clin99/Software/OpenTimer/benchmark/vga_lcd/vga_lcd.spef");
   //std::ifstream ifs("/home/clin99/Software/spirit/aes_cipher_top.spef");
   //std::ifstream ifs("./simple.spef");
+  std::ifstream ifs(argv[1]);
   //show = true;
 
   ifs.seekg(0, std::ios::end);
@@ -115,13 +80,14 @@ int main(int argc, char* argv[]){
     tao::pegtl::memory_input<> in(buffer, "");
     try{
       tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
-      std::cout << "\n\n\n";
       if(show){
+        std::cout << "\n\n\n";
         std::cout << data.dump() << '\n';
       }
     }
     catch(const std::exception& e){
       std::cout << "PARSE FAILED WITH EXCEPTION: " << e.what() << std::endl;
+      return 1;
     }
   }
 

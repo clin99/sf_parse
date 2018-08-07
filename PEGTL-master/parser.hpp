@@ -362,8 +362,8 @@ struct Data{
   std::unordered_map<std::string, Port> ports;
   std::unordered_map<std::string, Net> nets;
 
-  // TODO: change to iterator 
-  std::string current_net;
+  // TODO: change to iterator  
+  std::unordered_map<std::string, Net>::iterator current_net;
 
   void add_header(const std::string&);
 
@@ -396,12 +396,12 @@ inline std::string Data::dump() const {
     os << k << ' ' << v << '\n';
   }
   os << '\n';
-  for(const auto& [k,v]: ports){
-    os << "PORT[" << k << "] \n" << v << '\n';
+  for(const auto iter: ports){
+    os << iter.second << '\n';
   }
   os << '\n';
-  for(const auto& [k,v]: nets){
-    os << "NET[" << k << "] \n" <<  v << '\n';
+  for(const auto iter: nets){
+    os << iter.second << '\n';
   }
   return os.str();
 }
@@ -448,10 +448,11 @@ inline void Data::add_header(const std::string& s){
       bus_delimiter = s;
       state = State::BUS_DELIMITER;
       break;
-    //case State::BUS_DELIMITER:
+    case State::BUS_DELIMITER:
+      assert(false);
     //  bus_delimiter = s;
     //  state = State::NONE;
-    //  break;
+      break;
     default:
       break;
   }
@@ -459,6 +460,8 @@ inline void Data::add_header(const std::string& s){
 
 
 namespace pegtl = tao::TAO_PEGTL_NAMESPACE;
+using token = pegtl::until<pegtl::at<pegtl::space>>;
+using delimiter = pegtl::plus<pegtl::space>;
 
 template<typename T>
 struct action: pegtl::nothing<T>
@@ -502,10 +505,7 @@ struct action<Header>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
-    // TODO
-    auto str {in.string()};
-    //std::cout << "Header = " << str << std::endl;
-    d.add_header(str);
+    d.add_header(in.string());
   };
 };
 
@@ -590,19 +590,19 @@ struct rule_design_flow: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN_FLOW"
 {};
 
 struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"), 
-  pegtl::plus<pegtl::space>, SpefDivider, DontCare>
+  delimiter, SpefDivider, DontCare>
 {};
 
-struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), pegtl::plus<pegtl::space>, SpefDelimiter, DontCare>
+struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), delimiter, SpefDelimiter, DontCare>
 {};
 
-struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), pegtl::plus<pegtl::space>, SpefBusDelimiter, DontCare>
+struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), delimiter, SpefBusDelimiter, DontCare>
 {};
 
 // TODO: bol
 struct rule_unit: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,
-  TAO_PEGTL_STRING("_UNIT"), pegtl::plus<pegtl::space>, double_::rule, 
-  pegtl::plus<pegtl::space>, pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
+  TAO_PEGTL_STRING("_UNIT"), delimiter, double_::rule, 
+  delimiter, pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
   pegtl::sor<TAO_PEGTL_STRING("HENRY"), TAO_PEGTL_STRING("OHM"), pegtl::one<'S','F','H'>>>
 {};
 template <>
@@ -652,10 +652,8 @@ struct action<rule_name_map_beg>
 
 struct rule_name_map: pegtl::seq<
   // TODO : , TAO_PEGTL_STRING("*D_NET")
-  pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, TAO_PEGTL_STRING("*"),
-  pegtl::until<pegtl::at<pegtl::space>>,
-  pegtl::plus<pegtl::space>,
-  pegtl::until<pegtl::at<pegtl::space>>
+  pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, 
+  TAO_PEGTL_STRING("*"), token, delimiter, token
 >
 {};
 template <>
@@ -670,7 +668,7 @@ struct action<rule_name_map>
 };
 
 
-struct rule_port_beg: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PORTS"), DontCare>
+struct rule_port_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*PORTS"), DontCare>
 {};
 template <>
 struct action<rule_port_beg>  
@@ -684,18 +682,15 @@ struct action<rule_port_beg>
 // TODO: All sections are optional
 struct rule_port: pegtl::seq<
   pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
-  pegtl::until<pegtl::at<pegtl::space>>, 
-  pegtl::plus<pegtl::space>,
+  token, delimiter,
   pegtl::must<pegtl::one<'I','O','B'>>,
   pegtl::opt<
     pegtl::seq<
-      pegtl::plus<pegtl::space>,
+      delimiter,
       pegtl::sor<
-        pegtl::seq<TAO_PEGTL_STRING("*C"), pegtl::plus<pegtl::space>, double_::rule, 
-          pegtl::plus<pegtl::space>, double_::rule>,
-        pegtl::seq<TAO_PEGTL_STRING("*L"), pegtl::plus<pegtl::space>, double_::rule>,
-        pegtl::seq<TAO_PEGTL_STRING("*S"), pegtl::plus<pegtl::space>, double_::rule, 
-          pegtl::plus<pegtl::space>, double_::rule>
+        pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, delimiter, double_::rule>,
+        pegtl::seq<TAO_PEGTL_STRING("*L"), delimiter, double_::rule>,
+        pegtl::seq<TAO_PEGTL_STRING("*S"), delimiter, double_::rule, delimiter, double_::rule>
       >
     >
   >
@@ -762,18 +757,16 @@ struct action<rule_conn_beg>
 // using token = pegtl::until<pegtl::at<pegtl::space>>
 // using delimiter = pegtl::plus<pegtl::space>
 struct rule_conn: pegtl::seq<
-  pegtl::bol, pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, pegtl::plus<pegtl::space>,
-  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
-  pegtl::must<pegtl::one<'I','O','B'>>, 
+  pegtl::bol, pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, 
+  delimiter, token, delimiter, pegtl::must<pegtl::one<'I','O','B'>>, 
 
-  pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*C"), 
-  pegtl::plus<pegtl::space>, double_::rule, pegtl::plus<pegtl::space>, double_::rule>>,
+  pegtl::opt<delimiter, pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, 
+    delimiter, double_::rule>>,
 
-  pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*L"), 
-  pegtl::plus<pegtl::space>, double_::rule>>,
+  pegtl::opt<delimiter, pegtl::seq<TAO_PEGTL_STRING("*L"), delimiter, double_::rule>>,
 
-  pegtl::opt<pegtl::plus<pegtl::space>, pegtl::seq<TAO_PEGTL_STRING("*D"), 
-  pegtl::plus<pegtl::space>, pegtl::plus<pegtl::identifier_other>>>
+  pegtl::opt<delimiter, pegtl::seq<TAO_PEGTL_STRING("*D"), delimiter, 
+    pegtl::plus<pegtl::identifier_other>>>
 >
 {};
 template <>
@@ -782,7 +775,7 @@ struct action<rule_conn>
   template <typename Input>
   static void apply(const Input& in, Data& d){
     //std::cout << "Conn : " << in.string() << '\n';
-    auto &n = d.nets.at(d.current_net);
+    auto &n = d.current_net->second; 
     auto &c = n.connections.emplace_back();
 
     auto vec = split_on_space(in.string());
@@ -829,17 +822,13 @@ template <>
 struct action<rule_cap_beg>
 {
   template <typename Input>
-  static void apply(const Input& in, Data& d){
-    //std::cout << "CAP begin\n";
-  }
+  static void apply(const Input& in, Data& d){}
 };
 
 
 
 struct rule_cap_ground: pegtl::seq<
-  pegtl::bol, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>,
-  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
-  double_::rule
+  pegtl::bol, pegtl::plus<pegtl::digit>, delimiter, token, delimiter, double_::rule
 >
 {};
 template <>
@@ -849,17 +838,14 @@ struct action<rule_cap_ground>
   static void apply(const Input& in, Data& d){
     //std::cout << "CAP GROUND =" << in.string() << '\n';
     auto vec = split_on_space(in.string());
-    auto &n = d.nets.at(d.current_net);
+    auto &n = d.current_net->second; 
     n.caps.emplace_back(std::make_tuple(vec[1], "", std::stof(vec[2])));
   }
 };
 
 
 struct rule_cap_couple: pegtl::seq<
-  pegtl::bol, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>,
-  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
-  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
-  double_::rule
+  pegtl::bol, pegtl::plus<pegtl::digit>, delimiter, token, delimiter, token, delimiter, double_::rule
 >
 {};
 template <>
@@ -869,7 +855,7 @@ struct action<rule_cap_couple>
   static void apply(const Input& in, Data& d){
     //std::cout << "CAP COUPLE =" << in.string() << '\n';
     auto vec = split_on_space(in.string());
-    auto &n = d.nets.at(d.current_net);
+    auto &n = d.current_net->second; 
     n.caps.emplace_back(std::make_tuple(vec[1], vec[2], std::stof(vec[3])));
   }
 };
@@ -882,16 +868,12 @@ template <>
 struct action<rule_res_beg>
 {
   template <typename Input>
-  static void apply(const Input& in, Data& d){
-    //std::cout << "RES begin\n";
-  }
+  static void apply(const Input& in, Data& d){}
 };
 
 struct rule_res: pegtl::seq<
-  pegtl::bol, pegtl::plus<pegtl::digit>, pegtl::plus<pegtl::space>,
-  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
-  pegtl::until<pegtl::at<pegtl::space>>, pegtl::plus<pegtl::space>,
-  double_::rule
+  pegtl::bol, pegtl::plus<pegtl::digit>, delimiter,
+  token, delimiter, token, delimiter, double_::rule
 >
 {};
 template <>
@@ -901,7 +883,7 @@ struct action<rule_res>
   static void apply(const Input& in, Data& d){
     //std::cout << "RES =" << in.string() << '\n';
     auto vec = split_on_space(in.string());
-    auto &n = d.nets.at(d.current_net);
+    auto &n = d.current_net->second; 
     n.ress.emplace_back(std::make_tuple(vec[1], vec[2], std::stof(vec[3])));
   }
 };
@@ -911,9 +893,7 @@ struct action<rule_res>
 
 
 struct rule_net_beg: pegtl::seq<
-  pegtl::bol, TAO_PEGTL_STRING("*D_NET"),
-  pegtl::plus<pegtl::space>, pegtl::until<pegtl::at<pegtl::space>>,
-  pegtl::plus<pegtl::space>, double_::rule
+  pegtl::bol, TAO_PEGTL_STRING("*D_NET"), delimiter, token, delimiter, double_::rule
 >
 {};
 template <>
@@ -924,11 +904,12 @@ struct action<rule_net_beg>
     std::string str {in.string()};
     auto vec {split_on_space(str)}; 
 
-    d.nets.insert({vec[1], {}});
+    d.current_net = d.nets.insert({vec[1], {}}).first;
+
     auto &n = d.nets.at(vec[1]);
     n.name = vec[1];
     n.lcap = std::stof(vec[2]);
-    std::swap(d.current_net, vec[1]);
+    //std::swap(d.current_net, vec[1]);
   }
 };
 
@@ -939,9 +920,7 @@ template <>
 struct action<rule_net_end>
 {
   template <typename Input>
-  static void apply(const Input& in, Data& d){
-    //std::cout << "*END\n\n";
-  }
+  static void apply(const Input& in, Data& d){}
 };
 
 
@@ -961,15 +940,15 @@ struct rule_spef: pegtl::must<
   rule_bus_delimiter,
   pegtl::rep_max<4, pegtl::seq<rule_unit, DontCare>>,
   // TODO: opt no need star
-  pegtl::opt<rule_name_map_beg, pegtl::opt<pegtl::star<pegtl::seq<rule_name_map, DontCare>>>>,
+  pegtl::opt<rule_name_map_beg, pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
   // TODO: opt port 
-  rule_port_beg, pegtl::plus<pegtl::seq<rule_port, DontCare>>,
+  pegtl::opt<rule_port_beg, pegtl::star<pegtl::seq<rule_port, DontCare>>>,
   pegtl::star<rule_net_beg, DontCare,
     // change plus to star
-    pegtl::if_must<pegtl::seq<rule_conn_beg, DontCare>, pegtl::plus<pegtl::seq<rule_conn, DontCare>>>,
+    pegtl::if_must<pegtl::seq<rule_conn_beg, DontCare>, pegtl::star<pegtl::seq<rule_conn, DontCare>>>,
     pegtl::if_must<pegtl::seq<rule_cap_beg,  DontCare>, 
-      pegtl::plus<pegtl::seq<pegtl::sor<rule_cap_ground, rule_cap_couple>, DontCare>>>,
-    pegtl::if_must<pegtl::seq<rule_res_beg,  DontCare>, pegtl::plus<pegtl::seq<rule_res, DontCare>>>, 
+      pegtl::star<pegtl::seq<pegtl::sor<rule_cap_ground, rule_cap_couple>, DontCare>>>,
+    pegtl::if_must<pegtl::seq<rule_res_beg,  DontCare>, pegtl::star<pegtl::seq<rule_res, DontCare>>>, 
     rule_net_end, DontCare
   >
 >

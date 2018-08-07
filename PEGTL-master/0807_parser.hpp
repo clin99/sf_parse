@@ -1,12 +1,16 @@
 #ifndef SPEF_HPP_
 #define SPEF_HPP_
 
+//#include <boost/spirit/include/classic.hpp>
+//#include <boost/spirit/include/qi.hpp> 
+//#include <boost/spirit/home/x3.hpp>
 #include <tao/pegtl.hpp>
 #include <iostream>
 #include <cstring>
 #include <algorithm>
 #include <utility>
 #include <cassert>
+//#include <optional>
 #include <vector>
 #include <unordered_map>
 #include <tuple>
@@ -526,48 +530,48 @@ struct action<SpefBusDelimiter>
 
 //  Header Section --------------------------------------------------------------------------------
 
-struct rule_standard: pegtl::must<TAO_PEGTL_STRING("*SPEF"), 
+struct rule_standard: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*SPEF"), 
   Header, DontCare>
   //pegtl::plus<pegtl::seq<DontCare, QuotedString>>, DontCare> 
   //pegtl::plus<pegtl::blank>, QuotedString, DontCare>
 {};
 
-struct rule_design: pegtl::must<TAO_PEGTL_STRING("*DESIGN"), 
+struct rule_design: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN"), 
   Header, DontCare>
 {};
 
-struct rule_date: pegtl::must<TAO_PEGTL_STRING("*DATE"), 
+struct rule_date: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DATE"), 
   Header, DontCare>
 {};
 
-struct rule_vendor: pegtl::must<TAO_PEGTL_STRING("*VENDOR"), 
+struct rule_vendor: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VENDOR"), 
   Header, DontCare>
 {};
 
-struct rule_program: pegtl::must<TAO_PEGTL_STRING("*PROGRAM"), 
+struct rule_program: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*PROGRAM"), 
   Header, DontCare>
 {};
 
-struct rule_version: pegtl::must<TAO_PEGTL_STRING("*VERSION"), 
+struct rule_version: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*VERSION"), 
   Header, DontCare>
 {};
 
-struct rule_design_flow: pegtl::must<TAO_PEGTL_STRING("*DESIGN_FLOW"), 
+struct rule_design_flow: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DESIGN_FLOW"), 
   Header, DontCare>
 {};
 
-struct rule_divider: pegtl::must<TAO_PEGTL_STRING("*DIVIDER"), 
+struct rule_divider: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DIVIDER"), 
   delimiter, SpefDivider, DontCare>
 {};
 
-struct rule_delimiter: pegtl::must<TAO_PEGTL_STRING("*DELIMITER"), delimiter, SpefDelimiter, DontCare>
+struct rule_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*DELIMITER"), delimiter, SpefDelimiter, DontCare>
 {};
 
-struct rule_bus_delimiter: pegtl::must<TAO_PEGTL_STRING("*BUS_DELIMITER"), delimiter, SpefBusDelimiter, DontCare>
+struct rule_bus_delimiter: pegtl::must<pegtl::bol, TAO_PEGTL_STRING("*BUS_DELIMITER"), delimiter, SpefBusDelimiter, DontCare>
 {};
 
 // TODO: bol
-struct rule_unit: pegtl::seq<TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,
+struct rule_unit: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,
   TAO_PEGTL_STRING("_UNIT"), delimiter, double_::rule, 
   delimiter, pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
   pegtl::sor<TAO_PEGTL_STRING("HENRY"), TAO_PEGTL_STRING("OHM"), pegtl::one<'S','F','H'>>>
@@ -608,7 +612,7 @@ struct action<rule_unit>
 };
 
 
-struct rule_name_map_beg: pegtl::seq<TAO_PEGTL_STRING("*NAME_MAP"), DontCare>
+struct rule_name_map_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*NAME_MAP"), DontCare>
 {};
 template <>
 struct action<rule_name_map_beg>  
@@ -623,7 +627,7 @@ struct action<rule_name_map_beg>
 
 struct rule_name_map: pegtl::seq<
   // TODO : , TAO_PEGTL_STRING("*D_NET")
-  pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, 
+  pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, 
   TAO_PEGTL_STRING("*"), token, delimiter, token
 >
 {};
@@ -641,7 +645,7 @@ struct action<rule_name_map>
 };
 
 
-struct rule_port_beg: pegtl::seq<TAO_PEGTL_STRING("*PORTS"), DontCare>
+struct rule_port_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*PORTS"), DontCare>
 {};
 template <>
 struct action<rule_port_beg>  
@@ -656,7 +660,7 @@ struct action<rule_port_beg>
 
 // TODO: All sections are optional
 struct rule_port: pegtl::seq<
-  pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
+  pegtl::bol, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
   token, delimiter,
   pegtl::must<pegtl::one<'I','O','B'>>,
   pegtl::opt<
@@ -718,7 +722,7 @@ struct action<rule_port>
 
 
 
-struct rule_conn_beg: pegtl::seq<TAO_PEGTL_STRING("*CONN")>
+struct rule_conn_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*CONN")>
 {};
 template <>
 struct action<rule_conn_beg>
@@ -734,7 +738,7 @@ struct action<rule_conn_beg>
 // using token = pegtl::until<pegtl::at<pegtl::space>>
 // using delimiter = pegtl::plus<pegtl::space>
 struct rule_conn: pegtl::seq<
-  pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, 
+  pegtl::bol, pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, 
   delimiter, token, delimiter, pegtl::must<pegtl::one<'I','O','B'>>, 
 
   pegtl::opt<delimiter, pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, 
@@ -796,7 +800,7 @@ struct action<rule_conn>
 
 
 
-struct rule_cap_beg: pegtl::seq<TAO_PEGTL_STRING("*CAP")>
+struct rule_cap_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*CAP")>
 {};
 template <>
 struct action<rule_cap_beg>
@@ -808,7 +812,7 @@ struct action<rule_cap_beg>
 
 
 struct rule_cap_ground: pegtl::seq<
-  pegtl::plus<pegtl::digit>, delimiter, token, delimiter, double_::rule
+  pegtl::bol, pegtl::plus<pegtl::digit>, delimiter, token, delimiter, double_::rule
 >
 {};
 template <>
@@ -827,7 +831,7 @@ struct action<rule_cap_ground>
 
 
 struct rule_cap_couple: pegtl::seq<
-  pegtl::plus<pegtl::digit>, delimiter, token, delimiter, token, delimiter, double_::rule
+  pegtl::bol, pegtl::plus<pegtl::digit>, delimiter, token, delimiter, token, delimiter, double_::rule
 >
 {};
 template <>
@@ -846,7 +850,7 @@ struct action<rule_cap_couple>
 
 
 
-struct rule_res_beg: pegtl::seq<TAO_PEGTL_STRING("*RES")>
+struct rule_res_beg: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*RES")>
 {};
 template <>
 struct action<rule_res_beg>
@@ -856,7 +860,7 @@ struct action<rule_res_beg>
 };
 
 struct rule_res: pegtl::seq<
-  pegtl::plus<pegtl::digit>, delimiter,
+  pegtl::bol, pegtl::plus<pegtl::digit>, delimiter,
   token, delimiter, token, delimiter, double_::rule
 >
 {};
@@ -901,7 +905,7 @@ struct action<rule_net_beg>
 };
 
 
-struct rule_net_end: pegtl::seq<TAO_PEGTL_STRING("*END")>
+struct rule_net_end: pegtl::seq<pegtl::bol, TAO_PEGTL_STRING("*END")>
 {};
 template <>
 struct action<rule_net_end>
@@ -913,7 +917,6 @@ struct action<rule_net_end>
 
 //-------------------------------------------------------------------------------------------------
 struct rule_spef: pegtl::must<
-  pegtl::star<pegtl::sor<pegtl::space, pegtl::eof>>,
   rule_standard,
   rule_design, 
   rule_date, 

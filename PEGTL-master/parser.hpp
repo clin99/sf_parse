@@ -90,7 +90,7 @@ struct Spef {
  */
 
 
-static const bool disable = false;
+static const bool disable = true;
 
 namespace double_
 {

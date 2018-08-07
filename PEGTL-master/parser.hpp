@@ -879,7 +879,7 @@ struct action<rule_res>
 
 
 struct rule_net_beg: pegtl::seq<
-  pegtl::bol, TAO_PEGTL_STRING("*D_NET"), delimiter, token, delimiter, double_::rule
+  TAO_PEGTL_STRING("*D_NET"), delimiter, token, delimiter, double_::rule
 >
 {};
 template <>

@@ -23,63 +23,6 @@
 
 namespace spef{
 
-
-// ------------------------------------------------------------------------------------------------ 
-/*
-
-
-// ------------------------------------------------------------------------------------------------
-
-// Struct: Net
-struct Net {
-
-  std::string name;
-  float lcap;
-  std::vector<Connection> connections;
-  std::vector<std::tuple<std::string, float>> caps;
-  std::vector<std::tuple<std::string, std::string, float>> ress;
-
-  void scale_capacitance(float);
-  void scale_resistance(float);
-
-  Net() = default;
-  Net(Net&&) = default;
-
-  Net& operator = (Net&&) = default;
-};
-
-// Operator: <<
-std::ostream& operator << (std::ostream&, const Net&);
-
-// ------------------------------------------------------------------------------------------------
-
-// Struct: Spef 
-struct Spef {
-  
-  std::optional<char> divider;
-  std::optional<char> delimiter;
-  std::optional<TimeUnit> time_unit;
-  std::optional<CapacitanceUnit> capacitance_unit;
-  std::optional<ResistanceUnit> resistance_unit;
-
-  std::unordered_map<std::string, std::string> name_map;
-
-  std::vector<Net> nets;
-
-
-  void to_capacitance_unit(const CapacitanceUnit&);
-  void to_resistance_unit(const ResistanceUnit&);
-
-  Spef() = default;
-  Spef(Spef&&) = default;
-
-  Spef& operator = (Spef&&) = default;
-};
-*/
-
-//  end of spef data structure. --------------------------------------------------------------------
-
-
 /*
  *  A typical SPEF file will have 4 main sections:
  *  
@@ -90,7 +33,7 @@ struct Spef {
  */
 
 
-static const bool disable = true;
+
 
 namespace double_
 {
@@ -122,10 +65,26 @@ namespace double_
    struct rule : seq< plus_minus, sor< hexadecimal, decimal, inf, nan > > {}; 
 };
 
-
+static const bool disable = false;
 inline std::vector<std::string> split_on_space(const std::string& s){
-  const static std::regex ws_re {"\\s+"};
-  return std::vector<std::string>(std::sregex_token_iterator(s.begin(), s.end(), ws_re, -1), {});
+  //const static std::regex ws_re {"\\s+"};
+  //return std::vector<std::string>(std::sregex_token_iterator(s.begin(), s.end(), ws_re, -1), {});
+
+  std::vector<std::string> v;
+  size_t b {0};
+  size_t e {0};
+  while(e < s.size()){
+    while(e < s.size() and not std::isspace(s[e])){
+      e++;
+    }   
+    v.emplace_back(s.substr(b, e-b));
+    b = e + 1;
+    while(b < s.size() and std::isspace(s[b])){
+      b++;
+    }   
+    e = b;  
+  }
+  return v;
 }
 
 //inline std::vector<std::string_view> split_on_space(std::string_view s){
@@ -955,8 +914,6 @@ struct action<rule_net_end>
   template <typename Input>
   static void apply(const Input& in, Data& d){}
 };
-
-
 
 
 //-------------------------------------------------------------------------------------------------

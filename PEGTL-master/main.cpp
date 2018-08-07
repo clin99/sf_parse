@@ -11,6 +11,11 @@ namespace std {
 };
 
 int main(int argc, char* argv[]){
+
+  //std::string str = "\ta b c d \n";
+
+  //char str[] = "1234";
+
   if(argc != 2){
     std::cout << "Insufficient argument!\n";
     return 1;
@@ -46,7 +51,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-  buffer.append(1, EOF);
+  //buffer.append(1, EOF);
   //std::cout << buffer << '\n';
   //exit(1);
 

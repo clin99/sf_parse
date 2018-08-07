@@ -1,8 +1,15 @@
 #ifndef SPEF_HPP_
 #define SPEF_HPP_
 
+// TODO:
+// current_net => Net* _current_net;
+// atof.... => use float 
+// make std::vector<std::string_view> private and shared
+// add constructor for sub structs so we can fully utilize the try_emplace
+
 #include <tao/pegtl.hpp>
 #include <iostream>
+#include <charconv>
 #include <cstring>
 #include <algorithm>
 #include <utility>
@@ -62,7 +69,7 @@ namespace double_
 };
 
 static const bool disable = false;
-inline std::vector<std::string> split_on_space(const std::string& s){
+/*inline std::vector<std::string> split_on_space(const std::string& s){
   //const static std::regex ws_re {"\\s+"};
   //return std::vector<std::string>(std::sregex_token_iterator(s.begin(), s.end(), ws_re, -1), {});
 
@@ -81,7 +88,49 @@ inline std::vector<std::string> split_on_space(const std::string& s){
     e = b;  
   }
   return v;
+}*/
+
+// TODO:
+//void split_on_space(
+//  const char* beg,
+//  const char* end,  
+//  std::vector<std::string_view>&
+//) {
+//  tokens.clear();
+//}
+
+// Function: split_on_space
+std::vector<std::string_view>& split_on_space(const char* beg, const char* end) {
+
+  // Parse the token.
+  const char *token {nullptr};
+  size_t len {0};
+  static std::vector<std::string_view> tokens;
+
+  tokens.clear();
+
+  for(const char* itr = beg; itr != end && *itr != 0; ++itr) {
+    if(std::isspace(*itr)) {
+      if(len > 0) {                            // Add the current token.
+        tokens.push_back({token, len});
+        token = nullptr;
+        len = 0;
+      }
+    } else {
+      if(len == 0) {
+        token = itr;
+      }
+      ++len;
+    }
+  }
+
+  if(len > 0) {
+    tokens.push_back({token, len});
+  } 
+	
+  return tokens;
 }
+
 
 //inline std::vector<std::string_view> split_on_space(std::string_view s){
 //  const static std::regex ws_re {"\\s+"};
@@ -137,7 +186,7 @@ struct Port{
   std::string name;
   ConnectionDirection direction;  // I, O, B 
   char type;  // C, L or S
-  std::vector<double> values;
+  std::vector<float> values;
 
   friend std::ostream& operator<<(std::ostream&, const Port&);
 };
@@ -171,8 +220,8 @@ struct Connection {
   ConnectionType type;
   ConnectionDirection direction;
 
-  std::optional<std::pair<double, double>> coordinate;
-  std::optional<double> load;    
+  std::optional<std::pair<float, float>> coordinate;
+  std::optional<float> load;    
   std::string driving_cell;
 
   //Connection(const std::string&, ConnectionType, ConnectionDirection);
@@ -215,6 +264,9 @@ struct Net {
   //Net(Net&&) = default;
 
   //Net& operator = (Net&&) = default;
+
+  private:
+
 };
 
 
@@ -288,6 +340,7 @@ std::ostream& operator<<(std::ostream& os, const State& s)
  
 
 struct Data{
+
   State state {State::NONE};
   std::string standard;
   std::string design_name;
@@ -324,6 +377,12 @@ struct Data{
   void add_header(const std::string&);
 
   std::string dump() const;
+
+  private:
+    
+    // TODO:
+    Net* _current_net {nullptr};
+    std::vector<std::string_view> _tokens;
 };
 
 inline std::string Data::dump() const {
@@ -431,7 +490,7 @@ struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
 
 //struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
 //struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, Comment>>
-struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, pegtl::eof>>
+struct DontCare: pegtl::plus<pegtl::space>
 {};
 
 
@@ -579,10 +638,15 @@ struct action<rule_unit>
   static bool apply(const Input& in, Data& d){
     if(disable)
       return true; 
-    std::string str {in.string()};
-    auto vec = split_on_space(str);
+    //std::string str {in.string()};
+    //auto vec = split_on_space(str);
 
-    double scale {1.0};
+    //auto& vec = split_on_space(in.begin(), in.end());
+    split_on_space(in.begin(), in.end());
+
+    return true;
+
+    /*double scale {1.0};
     if(vec[2].size() > 1 and d.scale.find(vec[2][0]) != d.scale.end()){
       scale = d.scale.at(vec[2][0]);
     }
@@ -603,7 +667,7 @@ struct action<rule_unit>
       default:
         break;
     }
-    return true;
+    return true;*/
   }
 };
 
@@ -634,9 +698,9 @@ struct action<rule_name_map>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ;
-    std::string str {in.string()};
-    auto vec = split_on_space(str); 
-    d.name_map.insert({vec[0], vec[1]});
+    auto& vec = split_on_space(in.begin(), in.end()); 
+    //d.name_map.insert({vec[0], vec[1]});
+    d.name_map.try_emplace( std::string{vec[0]}, std::string{vec[1]} );
   }
 };
 
@@ -678,10 +742,12 @@ struct action<rule_port>
   static bool apply(const Input& in, Data& d){
     if(disable)
       return true; 
-    std::string str {in.string()};
-    auto vec = split_on_space(str); 
-    d.ports.insert({vec[0], {}});
-    auto& p = d.ports.at(vec[0]);
+    //std::string str {in.string()};
+    auto& vec = split_on_space(in.begin(), in.end()); 
+    //d.ports.insert({vec[0], {}});
+    //auto& p = d.ports.at(vec[0]);
+
+    auto& p = d.ports[std::string{vec[0]}];
 
     // Set up name 
     p.name = vec[0];
@@ -710,7 +776,7 @@ struct action<rule_port>
 
     // Insert values
     for(size_t i=3; i<vec.size(); i++){
-      p.values.emplace_back(std::stod(vec[i]));
+      p.values.emplace_back(std::atof(vec[i].data()));
     }
     return true;
   }
@@ -758,7 +824,8 @@ struct action<rule_conn>
     auto &n = d.current_net->second; 
     auto &c = n.connections.emplace_back();
 
-    auto vec = split_on_space(in.string());
+    auto& vec = split_on_space(in.begin(), in.end());
+
     c.type = vec[0][1] == 'P' ? ConnectionType::EXTERNAL : ConnectionType::INTERNAL;
     c.name = vec[1];
     switch(vec[2][0]){
@@ -775,11 +842,11 @@ struct action<rule_conn>
 
     for(size_t i=3; i<vec.size(); i++){
       if(vec[i].compare("*C") == 0){
-        c.coordinate = std::make_pair(std::stod(vec[i+1]), std::stod(vec[i+2]));
+        c.coordinate = std::make_pair(std::atof(vec[i+1].data()), std::atof(vec[i+2].data()));
         i += 2;
       }
       else if(vec[i].compare("*L") == 0){
-        c.load = std::stod(vec[i+1]);
+        c.load = std::atof(vec[i+1].data());
         i += 1;
       }
       else if(vec[i].compare("*D") == 0){
@@ -819,9 +886,10 @@ struct action<rule_cap_ground>
     if(disable)
       return ; 
     //std::cout << "CAP GROUND =" << in.string() << '\n';
-    auto vec = split_on_space(in.string());
+    auto& vec = split_on_space(in.begin(), in.end());
     auto &n = d.current_net->second; 
-    n.caps.emplace_back(std::make_tuple(vec[1], "", std::stof(vec[2])));
+    // TODO: verify...?
+    n.caps.emplace_back(std::forward_as_tuple(vec[1], "", std::atof(vec[2].data())));
   }
 };
 
@@ -838,9 +906,9 @@ struct action<rule_cap_couple>
     if(disable)
       return ; 
     //std::cout << "CAP COUPLE =" << in.string() << '\n';
-    auto vec = split_on_space(in.string());
+    auto& vec = split_on_space(in.begin(), in.end());
     auto &n = d.current_net->second; 
-    n.caps.emplace_back(std::make_tuple(vec[1], vec[2], std::stof(vec[3])));
+    n.caps.emplace_back(std::forward_as_tuple(vec[1], vec[2], std::atof(vec[3].data())));
   }
 };
 
@@ -868,9 +936,9 @@ struct action<rule_res>
     if(disable)
       return ; 
     //std::cout << "RES =" << in.string() << '\n';
-    auto vec = split_on_space(in.string());
+    auto& vec = split_on_space(in.begin(), in.end());
     auto &n = d.current_net->second; 
-    n.ress.emplace_back(std::make_tuple(vec[1], vec[2], std::stof(vec[3])));
+    n.ress.emplace_back(std::forward_as_tuple(vec[1], vec[2], std::atof(vec[3].data())));
   }
 };
 
@@ -889,14 +957,15 @@ struct action<rule_net_beg>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ; 
-    std::string str {in.string()};
-    auto vec {split_on_space(str)}; 
+    auto& vec = split_on_space(in.begin(), in.end()); 
+    
+    // TODO: replace current_net with raw pointer?
+    // d._current_net = &(d.nets[std::string{vec[1]}]);
+    d.current_net = d.nets.insert({std::string{vec[1]}, {}}).first;
+    //d.current_net = d.nets.try_emplace(std::string{vec[1]}, {}).first;
 
-    d.current_net = d.nets.insert({vec[1], {}}).first;
-
-    auto &n = d.nets.at(vec[1]);
-    n.name = vec[1];
-    n.lcap = std::stof(vec[2]);
+    d.current_net->second.name = vec[1];
+    d.current_net->second.lcap = std::atof(vec[2].data());
   }
 };
 
@@ -913,7 +982,7 @@ struct action<rule_net_end>
 
 //-------------------------------------------------------------------------------------------------
 struct rule_spef: pegtl::must<
-  pegtl::star<pegtl::sor<pegtl::space, pegtl::eof>>,
+  pegtl::star<pegtl::space>,
   rule_standard,
   rule_design, 
   rule_date, 

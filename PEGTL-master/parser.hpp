@@ -90,6 +90,7 @@ struct Spef {
  */
 
 
+static const bool disable = false;
 
 namespace double_
 {
@@ -505,6 +506,8 @@ struct action<Header>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ; 
     d.add_header(in.string());
   };
 };
@@ -517,6 +520,9 @@ struct action<SpefDivider>
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
+    if(disable)
+      return true; 
+
     if(in.size() != 1){
       return false;
     }
@@ -532,6 +538,9 @@ struct action<SpefDelimiter>
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
+    if(disable)
+      return true; 
+
     if(in.size() != 1){
       return false;
     }
@@ -547,6 +556,9 @@ struct action<SpefBusDelimiter>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+       return ; 
+
     std::string str {in.string()};
     str.erase(std::remove_if(str.begin(), str.end(), [](auto c){return std::isspace(c);}), str.end());
     d.add_header(std::move(str));
@@ -610,6 +622,8 @@ struct action<rule_unit>
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
+    if(disable)
+      return true; 
     std::string str {in.string()};
     auto vec = split_on_space(str);
 
@@ -646,6 +660,8 @@ struct action<rule_name_map_beg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ; 
     d.state = State::NAME_MAP;
   }
 };
@@ -661,6 +677,8 @@ struct action<rule_name_map>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ;
     std::string str {in.string()};
     auto vec = split_on_space(str); 
     d.name_map.insert({vec[0], vec[1]});
@@ -675,6 +693,8 @@ struct action<rule_port_beg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ; 
     d.state = State::PORTS;
   }
 };
@@ -701,6 +721,8 @@ struct action<rule_port>
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
+    if(disable)
+      return true; 
     std::string str {in.string()};
     auto vec = split_on_space(str); 
     d.ports.insert({vec[0], {}});
@@ -774,6 +796,9 @@ struct action<rule_conn>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ;
+
     //std::cout << "Conn : " << in.string() << '\n';
     auto &n = d.current_net->second; 
     auto &c = n.connections.emplace_back();
@@ -836,6 +861,8 @@ struct action<rule_cap_ground>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ; 
     //std::cout << "CAP GROUND =" << in.string() << '\n';
     auto vec = split_on_space(in.string());
     auto &n = d.current_net->second; 
@@ -853,6 +880,8 @@ struct action<rule_cap_couple>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ; 
     //std::cout << "CAP COUPLE =" << in.string() << '\n';
     auto vec = split_on_space(in.string());
     auto &n = d.current_net->second; 
@@ -881,6 +910,8 @@ struct action<rule_res>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ; 
     //std::cout << "RES =" << in.string() << '\n';
     auto vec = split_on_space(in.string());
     auto &n = d.current_net->second; 
@@ -901,6 +932,8 @@ struct action<rule_net_beg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
+    if(disable)
+      return ; 
     std::string str {in.string()};
     auto vec {split_on_space(str)}; 
 

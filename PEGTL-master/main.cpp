@@ -80,6 +80,8 @@ int main(int argc, char* argv[]){
     tao::pegtl::memory_input<> in(buffer, "");
     try{
       tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
+      //tao::pegtl::parse<spef::rule_spef>(in, data);
+
       if(show){
         std::cout << "\n\n\n";
         std::cout << data.dump() << '\n';

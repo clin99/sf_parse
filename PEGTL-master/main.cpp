@@ -29,21 +29,20 @@ int main(int argc, char* argv[]){
   //exit(1);
 
   //std::vector<std::string_view> sv;
-  ////std::string str = "\ta b c \t\r \t d \n";
-  //////std::string str = "\t\n";
-  ////spef::split_on_space(str.data(), str.data()+str.size(), sv);
+  //std::string str = "\ta b c \t\r \t d \n";
+  ////std::string str = "\t\n";
+  //spef::split_on_space1(str.data(), str.data()+str.size(), sv);
 
-  //char str[] = "  \t aba \r \v1234 awerwr \t\r \t";
-  //spef::split_on_space(str, str+sizeof(str), sv);
+  ////char str[] = "  \t aba \r \v1234 awerwr \t\r \t";
+  ////spef::split_on_space1(str, str+sizeof(str), sv);
 
   //for(auto s: sv){
   //  std::cout << "=" << s << "=\n";
   //}
+  //exit(1);
 
-  //assume sizeof(char*) == 8 bytes
 
-  //std::cout << sizeof(str1);
-  //std::cout << sizeof(str2);
+
 
 
 

@@ -16,7 +16,7 @@
 *PROGRAM "Benchmark Parasitic Generator"
 *VERSION "0.0"
 *DESIGN_FLOW "NETLIST_TYPE_VERILOG"
-*DIVIDER / awer
+*DIVIDER / 
 *DELIMITER :
 *BUS_DELIMITER [  ]  
 *T_UNIT 1 PS
@@ -45,7 +45,7 @@
 
 *5486 I *C 201.888 99.36
 *5500 B *L 201.888 
-*7744 O
+*7744 O 
 
 
 

@@ -56,12 +56,11 @@ namespace double_
   struct rule : seq< plus_minus, sor< hexadecimal, decimal, inf, nan > > {}; 
 };
 
-static const bool disable = false;
 
 
 // TODO:
 /*
-void split_on_space(
+void split_on_space1(
   const char* beg,
   const char* end,  
   std::vector<std::string_view>& tokens
@@ -73,17 +72,20 @@ void split_on_space(
   while(itr != end and *itr != 0){
     if(std::isspace(*itr)) {
       // Consume space
-      while(++itr != end and *itr != 0 and std::isspace(*itr)){
+      while(itr != end and *itr != 0 and std::isspace(*itr)){
+        ++ itr;
       }
     }
     else{
-      len = 1;
+      len = 0;
       // Consume non-space
       while(itr != end and *itr != 0 and not std::isspace(*itr)){
         itr ++;
         len ++;
       }
-      tokens.push_back({itr-len+1, len});
+      if(len > 0){
+        tokens.push_back({itr-len, len});
+      }
     }
   }
 }
@@ -134,8 +136,8 @@ enum class ConnectionType {
 std::ostream& operator<<(std::ostream& os, const ConnectionType& c)
 {
 	switch(c){
-    case ConnectionType::INTERNAL: os << "INTERNAL"; break;
-    case ConnectionType::EXTERNAL: os << "EXTERNAL"; break;
+    case ConnectionType::INTERNAL: os << "*I"; break;
+    case ConnectionType::EXTERNAL: os << "*P"; break;
 		default    : os.setstate(std::ios_base::failbit);
 	}
 	return os;
@@ -151,9 +153,9 @@ enum class ConnectionDirection {
 std::ostream& operator<<(std::ostream& os, const ConnectionDirection& c)
 {
 	switch(c){
-    case ConnectionDirection::INPUT  : os << "INPUT";  break;
-    case ConnectionDirection::OUTPUT : os << "OUTPUT"; break;
-    case ConnectionDirection::INOUT  : os << "INOUT";  break;
+    case ConnectionDirection::INPUT  : os << "I";  break;
+    case ConnectionDirection::OUTPUT : os << "O"; break;
+    case ConnectionDirection::INOUT  : os << "B";  break;
 		default    : os.setstate(std::ios_base::failbit);
 	}
 	return os;
@@ -198,12 +200,10 @@ struct Connection {
   std::optional<float> load;    
   std::string driving_cell;
 
-  //Connection(const std::string&, ConnectionType, ConnectionDirection);
-
   Connection() = default;
-  //Connection(Connection&&) = default;
+  Connection(Connection&&) = default;
 
-  //Connection& operator = (Connection&&) = default;
+  Connection& operator = (Connection&&) = default;
 };
 
 std::ostream& operator<<(std::ostream& os, const Connection& c)
@@ -224,23 +224,13 @@ std::ostream& operator<<(std::ostream& os, const Connection& c)
 
 
 struct Net {
-
   std::string name;
   float lcap;
   std::vector<Connection> connections;
   std::vector<std::tuple<std::string, std::string, float>> caps;
   std::vector<std::tuple<std::string, std::string, float>> ress;
 
-  //void scale_capacitance(float);
-  //void scale_resistance(float);
-
   Net() = default;
-  //Net(Net&&) = default;
-
-  //Net& operator = (Net&&) = default;
-
-  private:
-
 };
 
 std::ostream& operator<<(std::ostream& os, const Net& n)
@@ -268,6 +258,7 @@ std::ostream& operator<<(std::ostream& os, const Net& n)
   for(const auto& r: n.ress){
     os << std::get<0>(r) << ' ' << std::get<1>(r) << ' ' << std::get<2>(r) << '\n';
   }
+  os << "*END\n";
   return os;  
 }
  
@@ -300,8 +291,7 @@ struct Spef {
   friend void split_on_space(const char*, const char*, std::vector<std::string_view>&);
 
   private:
-    
-    // TODO:
+  
     Net* _current_net {nullptr};
     std::vector<std::string_view> _tokens;
 };
@@ -325,7 +315,7 @@ inline std::string Spef::dump() const {
     << "L_UNIT:"        << inductance_unit  << "\n"
   ;
   os << '\n';
-  return os.str();
+
   if(not name_map.empty()){
     os << "*NAME_MAP\n";
   }
@@ -333,6 +323,7 @@ inline std::string Spef::dump() const {
     os << k << ' ' << v << '\n';
   }
   os << '\n';
+  os << "*PORTS\n";
   for(const auto& p: ports){
     os << p << '\n';
   }
@@ -370,9 +361,6 @@ struct Action<Divider>
 {
   template <typename Input>
   static bool apply(const Input& in, Spef& d){
-    if(disable)
-      return true; 
-
     if(in.size() != 1){
       return false;
     }
@@ -388,9 +376,6 @@ struct Action<Delimiter>
 {
   template <typename Input>
   static bool apply(const Input& in, Spef& d){
-    if(disable)
-      return true; 
-
     if(in.size() != 1){
       return false;
     }
@@ -406,9 +391,6 @@ struct Action<BusDelimiter>
 {
   template <typename Input>
   static void apply(const Input& in, Spef& d){
-    if(disable)
-       return ; 
-
     d.bus_delimiter = in.string();
     // Remove space between middle 
     d.bus_delimiter.erase(std::remove_if(d.bus_delimiter.begin(), d.bus_delimiter.end(), 
@@ -530,8 +512,6 @@ struct Action<RuleUnit>
 {
   template <typename Input>
   static bool apply(const Input& in, Spef& d){
-    if(disable)
-      return true; 
     switch(in.peek_char(1)){
       case 'T': d.time_unit = in.string().erase(0, header_begin(in.begin()+sizeof("*T_UNIT"))-in.begin());
         break;
@@ -568,8 +548,6 @@ struct Action<RuleNameMap>
 {
   template <typename Input>
   static void apply(const Input& in, Spef& d){
-    if(disable)
-      return ;
     split_on_space(in.begin(), in.end(), d._tokens); 
     //d.name_map.insert({vec[0], vec[1]});
     d.name_map.try_emplace( std::string{d._tokens[0]}, std::string{d._tokens[1]} );
@@ -614,9 +592,6 @@ struct Action<RulePort>
 {
   template <typename Input>
   static bool apply(const Input& in, Spef& d){
-    if(disable)
-      return true; 
-
     split_on_space(in.begin(), in.end(), d._tokens); 
 
     d.ports.emplace_back(std::string{d._tokens[0]});
@@ -688,9 +663,6 @@ struct Action<RuleConn>
 {
   template <typename Input>
   static void apply(const Input& in, Spef& d){
-    if(disable)
-      return ;
-
     auto &c = d._current_net->connections.emplace_back();
 
     split_on_space(in.begin(), in.end(), d._tokens);
@@ -750,9 +722,6 @@ struct Action<RuleCapGround>
 {
   template <typename Input>
   static void apply(const Input& in, Spef& d){
-    if(disable)
-      return ; 
-
     split_on_space(in.begin(), in.end(), d._tokens);
     // TODO: verify...?
     d._current_net->caps.emplace_back(
@@ -771,8 +740,6 @@ struct Action<RuleCapCouple>
 {
   template <typename Input>
   static void apply(const Input& in, Spef& d){
-    if(disable)
-      return ; 
     split_on_space(in.begin(), in.end(), d._tokens);
     d._current_net->caps.emplace_back(
       std::forward_as_tuple(d._tokens[1], d._tokens[2], std::strtof(d._tokens[3].data(), nullptr))
@@ -801,9 +768,6 @@ struct Action<RuleRes>
 {
   template <typename Input>
   static void apply(const Input& in, Spef& d){
-    if(disable)
-      return ; 
-
     split_on_space(in.begin(), in.end(), d._tokens);
     d._current_net->ress.emplace_back(
       std::forward_as_tuple(d._tokens[1], d._tokens[2], std::strtof(d._tokens[3].data(), nullptr))
@@ -820,8 +784,6 @@ struct Action<RuleNetBeg>
 {
   template <typename Input>
   static void apply(const Input& in, Spef& d){
-    if(disable)
-      return ; 
     split_on_space(in.begin(), in.end(), d._tokens);
     
     d._current_net = &(d.nets.emplace_back());
@@ -849,7 +811,7 @@ struct Action<RuleInputEnd>
   template <typename Input>
   static void apply(const Input& in, Spef& d){
     if(in.size() != 0){
-    //  throw tao::pegtl::parse_error("Unrecognized token", in);
+      throw tao::pegtl::parse_error("Unrecognized token", in);
     }
   }
 };
@@ -858,7 +820,7 @@ struct Action<RuleInputEnd>
 
 
 
-// Spef Rule --------------------------------------------------------------------------------------
+// Spef Top Rule -----------------------------------------------------------------------------------
 struct RuleSpef: pegtl::must<pegtl::star<pegtl::space>,
 
   pegtl::opt<pegtl::seq<RuleStandard,     RuleDontCare>>,
@@ -894,6 +856,7 @@ struct RuleSpef: pegtl::must<pegtl::star<pegtl::space>,
 
 
 
+// Error control ----------------------------------------------------------------------------------
 template<typename Rule>
 struct ParserControl : tao::pegtl::normal<Rule>
 {
@@ -906,8 +869,8 @@ struct ParserControl : tao::pegtl::normal<Rule>
    }
 };
 
-template<typename T> const std::string ParserControl<T>::error_message = "Fail to parse the Spef @ rule " + 
-  tao::pegtl::internal::demangle< T>();
+template<typename T> const std::string ParserControl<T>::error_message = "Fail to match the Spef rule: \033[31m" + 
+  tao::pegtl::internal::demangle< T>() + "\033[0m";
 
 };    // end of namespace spef. --------------------------------------------------------------------
 

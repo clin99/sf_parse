@@ -73,10 +73,10 @@ int main(int argc, char* argv[]){
   replace_comment(buffer);
 
   { 
-    spef::Data data;
+    spef::Spef data;
     tao::pegtl::memory_input<> in(buffer, "");
     try{
-      tao::pegtl::parse<spef::RuleSpef, spef::Action>(in, data);
+      tao::pegtl::parse<spef::RuleSpef, spef::Action, spef::ParserControl>(in, data);
       //tao::pegtl::parse<spef::RuleSpef>(in, data);
 
       if(show){
@@ -84,8 +84,13 @@ int main(int argc, char* argv[]){
         std::cout << data.dump() << '\n';
       }
     }
-    catch(const std::exception& e){
-      std::cout << "PARSE FAILED WITH EXCEPTION: " << e.what() << std::endl;
+    catch(const tao::pegtl::parse_error& e){
+      std::cout << e.what() << std::endl;
+
+      const auto p = e.positions.front();
+      std::cout << "Fail at line " << p.line << ":\n";
+      std::cout << "  " << in.line_as_string(p) << '\n';
+      std::cout << "  " << std::string(p.byte_in_line, ' ') << '^' << '\n';
       return 1;
     }
 

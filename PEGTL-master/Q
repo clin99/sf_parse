@@ -3,6 +3,12 @@
 
 
 *D_NET inp1 5.4
-*CAP
-*RES
+*CONN 
+*P inp2 I
+
+*CAP 
+1 inp2 0.2 
+
+*RES 
+
 *END

@@ -836,18 +836,19 @@ struct RuleSpef: pegtl::must<pegtl::star<pegtl::space>,
 
   pegtl::rep_max<4, pegtl::seq<RuleUnit, RuleDontCare>>,
 
-  // TODO: opt no need star
   pegtl::opt<RuleNameMapBeg, pegtl::star<pegtl::seq<RuleNameMap, RuleDontCare>>>,
 
   pegtl::opt<RulePortBeg,    pegtl::star<pegtl::seq<RulePort, RuleDontCare>>>,
 
-  pegtl::star<pegtl::if_must<
-    RuleNetBeg, RuleDontCare,
-    pegtl::opt<pegtl::seq<RuleConnBeg, RuleDontCare>, pegtl::star<pegtl::seq<RuleConn, RuleDontCare>>>,
-    pegtl::opt<pegtl::seq<RuleCapBeg,  RuleDontCare>, 
-      pegtl::star<pegtl::seq<pegtl::sor<RuleCapGround, RuleCapCouple>, RuleDontCare>>>,
-    pegtl::opt<pegtl::seq<RuleResBeg,  RuleDontCare>, pegtl::star<pegtl::seq<RuleRes, RuleDontCare>>>, 
-    RuleNetEnd, RuleDontCare>
+  pegtl::star<
+    pegtl::if_must<
+      RuleNetBeg, RuleDontCare,
+      pegtl::opt<pegtl::seq<RuleConnBeg, RuleDontCare>, pegtl::star<pegtl::seq<RuleConn, RuleDontCare>>>,
+      pegtl::opt<pegtl::seq<RuleCapBeg,  RuleDontCare>, 
+        pegtl::star<pegtl::seq<pegtl::sor<RuleCapGround, RuleCapCouple>, RuleDontCare>>>,
+      pegtl::opt<pegtl::seq<RuleResBeg,  RuleDontCare>, pegtl::star<pegtl::seq<RuleRes, RuleDontCare>>>, 
+      RuleNetEnd, RuleDontCare
+    >
   >,
   pegtl::star<pegtl::space>, 
   RuleInputEnd

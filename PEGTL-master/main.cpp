@@ -10,21 +10,40 @@ namespace std {
   namespace filesystem = experimental::filesystem;
 };
 
+void replace_comment(std::string& buffer){
+  for(size_t i=0; i<buffer.size(); i++){
+    if(buffer[i] == '/' && i+1 < buffer.size() && buffer[i+1] == '/') {
+      buffer[i] = buffer[i+1] = ' ';
+      for(i=i+2; i<buffer.size(); ++i) {
+        if(buffer[i] == '\n' || buffer[i] == '\r') {
+          break;
+        }
+        else buffer[i] = ' ';
+      }
+    }
+  }
+}
+
 int main(int argc, char* argv[]){
 
   //std::vector<std::string_view> sv;
-  //std::string str = "\ta b c \t\r \t d \n";
-  ////std::string str = "\t\n";
-  //spef::split_on_space(str.data(), str.data()+str.size(), sv);
+  ////std::string str = "\ta b c \t\r \t d \n";
+  //////std::string str = "\t\n";
+  ////spef::split_on_space(str.data(), str.data()+str.size(), sv);
 
-  ////char str[] = "  \t aba \r \v1234 awerwr \t\r \t";
-  ////spef::split_on_space(str, str+sizeof(str), sv);
+  //char str[] = "  \t aba \r \v1234 awerwr \t\r \t";
+  //spef::split_on_space(str, str+sizeof(str), sv);
 
   //for(auto s: sv){
   //  std::cout << "=" << s << "=\n";
   //}
 
-  //return 0;
+  //assume sizeof(char*) == 8 bytes
+
+  //std::cout << sizeof(str1);
+  //std::cout << sizeof(str2);
+
+
 
   if(argc != 2){
     std::cout << "Insufficient argument!\n";
@@ -49,21 +68,28 @@ int main(int argc, char* argv[]){
   ifs.read(&buffer[0], size); 
   ifs.close();
 
-	for(size_t i=0; i<buffer.size(); i++){
-		if(buffer[i] == '/' && i+1 < buffer.size() && buffer[i+1] == '/') {
-			buffer[i] = buffer[i+1] = ' ';
-			for(i=i+2; i<buffer.size(); ++i) {
-				if(buffer[i] == '\n' || buffer[i] == '\r') {
-					break;
-				}
-				else buffer[i] = ' ';
-			}
-		}
-	}
+  replace_comment(buffer);
 
-  //buffer.append(1, EOF);
-  //std::cout << buffer << '\n';
-  //exit(1);
+  { 
+    spef::Data data;
+    tao::pegtl::memory_input<> in(buffer, "");
+    try{
+      tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
+      //tao::pegtl::parse<spef::rule_spef>(in, data);
+
+      if(show){
+        std::cout << "\n\n\n";
+        std::cout << data.dump() << '\n';
+      }
+    }
+    catch(const std::exception& e){
+      std::cout << "PARSE FAILED WITH EXCEPTION: " << e.what() << std::endl;
+      return 1;
+    }
+
+    //std::cout << data.dump() << std::endl;
+  }
+
 
 
   //{
@@ -90,23 +116,7 @@ int main(int argc, char* argv[]){
   //  return 0;
   //}
 
-  { 
-    spef::Data data;
-    tao::pegtl::memory_input<> in(buffer, "");
-    try{
-      tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
-      //tao::pegtl::parse<spef::rule_spef>(in, data);
-
-      if(show){
-        std::cout << "\n\n\n";
-        std::cout << data.dump() << '\n';
-      }
-    }
-    catch(const std::exception& e){
-      std::cout << "PARSE FAILED WITH EXCEPTION: " << e.what() << std::endl;
-      return 1;
-    }
-  }
+  
 
 
   //{

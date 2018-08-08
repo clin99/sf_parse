@@ -67,6 +67,10 @@
 *D_NET inp2 2.0
 *CONN
 *P inp2 I
+*I GG I *C 28.836 94.5 *L 0.000436 *D DFFHQNx1_ASAP7_75t_SL
+*I GG2 I *L 0.000436 *D DFFHQNx1_ASAP7_75t_SL
+*I GG3 I *D DFFHQNx1_ASAP7_75t_SL
+*I GG4 I *D DFFHQNx1_ASAP7_75t_SL *L 0.000436
 *I u1:B I
 *CAP
 1 inp2 0.2
@@ -77,17 +81,6 @@
 1 inp2 inp2:1 1.4
 2 inp2:1 inp2:2 1.5
 3 inp2:2 u1:B 1.6
-*END
-
-*D_NET out 0.7
-*CONN
-*I u3:Y O
-*P out O
-*CAP
-1 u3:Y 0.2
-2 out 0.5
-*RES
-1 u3:Y out 1.4
 *END
 
 *D_NET n1 1.0
@@ -101,33 +94,5 @@
 *RES
 1 u1:Y n1:1 1.1
 2 n1:1 u4:A 1.0
-*END
-
-*D_NET n2 1.2
-*CONN
-*I u4:Y O
-*I f1:D I
-*CAP
-1 u4:Y 0.7
-2 f1:D 0.5
-*RES
-1 u4:Y f1:D 2.1
-*END
-
-*D_NET n3 23.4
-*CONN
-*I f1:Q O
-*I u2:A I
-*I u4:B I
-*CAP
-1 n3:1 6.7
-2 n3:2 7.8
-3 n3:3 8.9
-*RES
-1 f1:Q n3:3 1.2
-2 n3:3 n3:1 2.3
-3 n3:1 u2:A 3.4
-4 n3:3 n3:2 4.5
-5 n3:2 u4:B 5.6
 *END
 

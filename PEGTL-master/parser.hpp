@@ -36,8 +36,6 @@ namespace spef{
  */
 
 
-
-
 namespace double_
 {
   using namespace tao::TAO_PEGTL_NAMESPACE;  // NOLINT
@@ -72,6 +70,7 @@ static const bool disable = false;
 
 
 // TODO:
+/*
 void split_on_space(
   const char* beg,
   const char* end,  
@@ -98,16 +97,16 @@ void split_on_space(
     }
   }
 }
+*/
 
 
 // Function: split_on_space 
-/*
-std::vector<std::string_view>& split_on_space(const char* beg, const char* end) {
+///*
+void split_on_space(const char* beg, const char* end, std::vector<std::string_view>& tokens) {
 
   // Parse the token.
   const char *token {nullptr};
   size_t len {0};
-  static std::vector<std::string_view> tokens;
 
   tokens.clear();
 
@@ -129,10 +128,8 @@ std::vector<std::string_view>& split_on_space(const char* beg, const char* end) 
   if(len > 0) {
     tokens.push_back({token, len});
   } 
-	
-  return tokens;
 }
-*/
+//*/
 
 
 
@@ -147,8 +144,8 @@ enum class ConnectionType {
 std::ostream& operator<<(std::ostream& os, const ConnectionType& c)
 {
 	switch(c){
-    case ConnectionType::INTERNAL: os << "INTERNAL";    break;
-    case ConnectionType::EXTERNAL: os << "EXTERNAL";    break;
+    case ConnectionType::INTERNAL: os << "INTERNAL"; break;
+    case ConnectionType::EXTERNAL: os << "EXTERNAL"; break;
 		default    : os.setstate(std::ios_base::failbit);
 	}
 	return os;
@@ -164,21 +161,21 @@ enum class ConnectionDirection {
 std::ostream& operator<<(std::ostream& os, const ConnectionDirection& c)
 {
 	switch(c){
-    case ConnectionDirection::INPUT  : os << "INPUT";     break;
-    case ConnectionDirection::OUTPUT : os << "OUTPUT";    break;
-    case ConnectionDirection::INOUT  : os << "INOUT";     break;
+    case ConnectionDirection::INPUT  : os << "INPUT";  break;
+    case ConnectionDirection::OUTPUT : os << "OUTPUT"; break;
+    case ConnectionDirection::INOUT  : os << "INOUT";  break;
 		default    : os.setstate(std::ios_base::failbit);
 	}
 	return os;
 }
 
 
-struct Port{
+struct Port {
   Port() = default;
   std::string name;
   ConnectionDirection direction;  // I, O, B 
-  char type;  // C, L or S
-  std::vector<float> values;
+  //char type;  // C, L or S
+  //std::vector<float> values;
 
   friend std::ostream& operator<<(std::ostream&, const Port&);
 };
@@ -187,21 +184,15 @@ std::ostream& operator<<(std::ostream& os, const Port& p)
 {  
   os << p.name << ' ';
   switch(p.direction){
-    case ConnectionDirection::INPUT:
-      os << 'I' << ' ';
-      break;
-    case ConnectionDirection::OUTPUT:
-      os << 'O' << ' ';
-      break;
-    case ConnectionDirection::INOUT:
-      os << 'B' << ' ';
-      break;
+    case ConnectionDirection::INPUT:  os << 'I'; break;
+    case ConnectionDirection::OUTPUT: os << 'O'; break;
+    case ConnectionDirection::INOUT:  os << 'B'; break;
     default: break;
   }
-  os << p.type << ' ';
-  for(const auto&v : p.values){
-    os << v << ' ';
-  }
+  //os << p.type << ' ';
+  //for(const auto&v : p.values){
+  //  os << v << ' ';
+  //}
   return os;  
 }  
 
@@ -331,8 +322,9 @@ std::ostream& operator<<(std::ostream& os, const State& s)
 }
  
 
-struct Data{
-
+struct Data {
+  
+  // Remove the state
   State state {State::NONE};
   std::string standard;
   std::string design_name;
@@ -344,6 +336,11 @@ struct Data{
   std::string divider;
   std::string delimiter;
   std::string bus_delimiter;
+  // TODO
+  std::string time_unit;
+  std::string capacitance_unit;
+  std::string resistance_unit;
+  std::string inductance_unit;
 
   const std::unordered_map<char, double> scale = {
     {'K', 1e3},
@@ -360,9 +357,12 @@ struct Data{
   double l_unit {0.0};
 
   std::unordered_map<std::string, std::string> name_map;
-  std::unordered_map<std::string, Port> ports;
-  std::unordered_map<std::string, Net> nets;
 
+  // TODO: make it a vector
+  std::unordered_map<std::string, Port> ports;
+  //std::unordered_map<std::string, Net> nets;
+  
+  std::vector<Net> nets;
 
   void add_header(const std::string&);
 
@@ -383,20 +383,20 @@ struct Data{
 inline std::string Data::dump() const {
   std::ostringstream os;
   os 
-    << "Standard:" << standard << "\n" 
-    << "Design name:" << design_name << "\n" 
-    << "Date:" << date << "\n" 
-    << "Vendor:" << vendor << "\n"
-    << "Program:" << program << "\n"
-    << "Version:" << version << "\n"
-    << "Design Flow:" << design_flow << "\n"
-    << "Divider:" << divider << "\n"
-    << "Delimiter:" << delimiter << "\n"
+    << "Standard:"      << standard      << "\n" 
+    << "Design name:"   << design_name   << "\n" 
+    << "Date:"          << date          << "\n" 
+    << "Vendor:"        << vendor        << "\n"
+    << "Program:"       << program       << "\n"
+    << "Version:"       << version       << "\n"
+    << "Design Flow:"   << design_flow   << "\n"
+    << "Divider:"       << divider       << "\n"
+    << "Delimiter:"     << delimiter     << "\n"
     << "Bus Delimiter:" << bus_delimiter << "\n"
-    << "T Unit:" << t_unit << "\n"
-    << "C Unit:" << c_unit << "\n"
-    << "R Unit:" << r_unit << "\n"
-    << "L Unit:" << l_unit << "\n"
+    << "T Unit:"        << t_unit        << "\n"
+    << "C Unit:"        << c_unit        << "\n"
+    << "R Unit:"        << r_unit        << "\n"
+    << "L Unit:"        << l_unit        << "\n"
   ;
   os << '\n';
   if(not name_map.empty()){
@@ -410,8 +410,11 @@ inline std::string Data::dump() const {
     os << iter.second << '\n';
   }
   os << '\n';
-  for(const auto iter: nets){
-    os << iter.second << '\n';
+  //for(const auto iter: nets){
+  //  os << iter.second << '\n';
+  //}
+  for(const auto& net : nets) {
+    os << net << '\n';
   }
   return os.str();
 }
@@ -470,6 +473,8 @@ inline void Data::add_header(const std::string& s){
 
 
 namespace pegtl = tao::TAO_PEGTL_NAMESPACE;
+
+// TODO: rename it
 using token = pegtl::until<pegtl::at<pegtl::space>>;
 using delimiter = pegtl::plus<pegtl::space>;
 
@@ -478,13 +483,6 @@ struct action: pegtl::nothing<T>
 {};
 
 
-
-//struct Comment: pegtl::must<TAO_PEGTL_KEYWORD("//"), pegtl::until<pegtl::eol>>
-struct Comment: pegtl::seq<TAO_PEGTL_STRING("//"), pegtl::until<pegtl::eol>>
-{};
-
-//struct DontCare: pegtl::plus<pegtl::sor<pegtl::eol, pegtl::plus<pegtl::space>, Comment>>
-//struct DontCare: pegtl::plus<pegtl::sor<pegtl::space, Comment>>
 struct DontCare: pegtl::plus<pegtl::space>
 {};
 
@@ -617,6 +615,9 @@ struct rule_divider: pegtl::must<TAO_PEGTL_STRING("*DIVIDER"),
 struct rule_delimiter: pegtl::must<TAO_PEGTL_STRING("*DELIMITER"), delimiter, SpefDelimiter, DontCare>
 {};
 
+// TODO: replace delimiter with RuleDontCare
+//RuleDontCare
+
 struct rule_bus_delimiter: pegtl::must<TAO_PEGTL_STRING("*BUS_DELIMITER"), delimiter, SpefBusDelimiter, DontCare>
 {};
 
@@ -717,7 +718,8 @@ struct rule_port: pegtl::seq<
   pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
   token, delimiter,
   pegtl::must<pegtl::one<'I','O','B'>>,
-  pegtl::opt<
+
+  /*pegtl::opt<
     pegtl::seq<
       delimiter,
       pegtl::sor<
@@ -726,7 +728,19 @@ struct rule_port: pegtl::seq<
         pegtl::seq<TAO_PEGTL_STRING("*S"), delimiter, double_::rule, delimiter, double_::rule>
       >
     >
-  >
+  >*/
+  
+  pegtl::star<pegtl::sor<
+    pegtl::seq<
+      delimiter, pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, delimiter, double_::rule>
+    >,
+    pegtl::seq<
+      delimiter, pegtl::seq<TAO_PEGTL_STRING("*L"), delimiter, double_::rule>
+    >,
+    pegtl::seq<
+      delimiter, pegtl::seq<TAO_PEGTL_STRING("*S"), delimiter, double_::rule, delimiter, double_::rule>
+    >
+  >>
 >
 {};
 template <>
@@ -763,15 +777,15 @@ struct action<rule_port>
         break;
     }
 
-    // Set up type 
-    if(d._tokens.size() > 2){
-      p.type = d._tokens[2][1];
-    }
+    //// Set up type 
+    //if(d._tokens.size() > 2){
+    //  p.type = d._tokens[2][1];
+    //}
 
-    // Insert values
-    for(size_t i=3; i<d._tokens.size(); i++){
-      p.values.emplace_back(std::strtof(d._tokens[i].data(), nullptr));
-    }
+    //// Insert values
+    //for(size_t i=3; i<d._tokens.size(); i++){
+    //  p.values.emplace_back(std::strtof(d._tokens[i].data(), nullptr));
+    //}
     return true;
   }
 };
@@ -792,14 +806,16 @@ struct action<rule_conn_beg>
 struct rule_conn: pegtl::seq<
   pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, 
   delimiter, token, delimiter, pegtl::must<pegtl::one<'I','O','B'>>, 
+  
+  pegtl::star<pegtl::sor<
+    pegtl::seq<delimiter, pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, 
+      delimiter, double_::rule>>,
 
-  pegtl::opt<delimiter, pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, 
-    delimiter, double_::rule>>,
+    pegtl::seq<delimiter, pegtl::seq<TAO_PEGTL_STRING("*L"), delimiter, double_::rule>>,
 
-  pegtl::opt<delimiter, pegtl::seq<TAO_PEGTL_STRING("*L"), delimiter, double_::rule>>,
-
-  pegtl::opt<delimiter, pegtl::seq<TAO_PEGTL_STRING("*D"), delimiter, 
-    pegtl::plus<pegtl::identifier_other>>>
+    pegtl::seq<delimiter, pegtl::seq<TAO_PEGTL_STRING("*D"), delimiter, 
+      pegtl::plus<pegtl::identifier_other>>>
+  >>
 >
 {};
 template <>
@@ -809,6 +825,7 @@ struct action<rule_conn>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ;
+
 
     auto &c = d._current_net->connections.emplace_back();
 
@@ -952,11 +969,8 @@ struct action<rule_net_beg>
     split_on_space(in.begin(), in.end(), d._tokens);
     
     // TODO: replace current_net with raw pointer?
-    // d._current_net = &(d.nets[std::string{vec[1]}]);
-    d._current_net = &(d.nets[{std::string{d._tokens[1]}}]);
-    //d.current_net = d.nets.insert({std::string{vec[1]}, {}}).first;
-    //d.current_net = d.nets.try_emplace(std::string{vec[1]}, {}).first;
-
+    //d._current_net = &(d.nets[{std::string{d._tokens[1]}}]);
+    d._current_net = &(d.nets.emplace_back());
     d._current_net->name = d._tokens[1];
     d._current_net->lcap = std::strtof(d._tokens[2].data(), nullptr);
   }

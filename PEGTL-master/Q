@@ -1,8 +1,8 @@
 
 
 
-*NAME_MAP   
 
-*509 F_C_EP2
-
-//*509 F_C_EP2
+*D_NET inp1 5.4
+*CAP
+*RES
+*END 

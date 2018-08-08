@@ -879,12 +879,13 @@ struct RuleSpef: pegtl::must<pegtl::star<pegtl::space>,
 
   pegtl::opt<RulePortBeg,    pegtl::star<pegtl::seq<RulePort, RuleDontCare>>>,
 
-  pegtl::star<RuleNetBeg, RuleDontCare,
+  pegtl::star<pegtl::if_must<
+    RuleNetBeg, RuleDontCare,
     pegtl::opt<pegtl::seq<RuleConnBeg, RuleDontCare>, pegtl::star<pegtl::seq<RuleConn, RuleDontCare>>>,
     pegtl::opt<pegtl::seq<RuleCapBeg,  RuleDontCare>, 
       pegtl::star<pegtl::seq<pegtl::sor<RuleCapGround, RuleCapCouple>, RuleDontCare>>>,
     pegtl::opt<pegtl::seq<RuleResBeg,  RuleDontCare>, pegtl::star<pegtl::seq<RuleRes, RuleDontCare>>>, 
-    RuleNetEnd, RuleDontCare
+    RuleNetEnd, RuleDontCare>
   >,
   pegtl::star<pegtl::space>, 
   RuleInputEnd
@@ -905,7 +906,7 @@ struct ParserControl : tao::pegtl::normal<Rule>
    }
 };
 
-template<typename T> const std::string ParserControl<T>::error_message = "Fail to parse the Spef" + 
+template<typename T> const std::string ParserControl<T>::error_message = "Fail to parse the Spef @ rule " + 
   tao::pegtl::internal::demangle< T>();
 
 };    // end of namespace spef. --------------------------------------------------------------------

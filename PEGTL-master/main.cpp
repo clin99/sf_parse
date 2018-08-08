@@ -25,6 +25,8 @@ void replace_comment(std::string& buffer){
 }
 
 int main(int argc, char* argv[]){
+  //std::cout << sizeof("DEISNG") << '\n';
+  //exit(1);
 
   //std::vector<std::string_view> sv;
   ////std::string str = "\ta b c \t\r \t d \n";
@@ -74,8 +76,8 @@ int main(int argc, char* argv[]){
     spef::Data data;
     tao::pegtl::memory_input<> in(buffer, "");
     try{
-      tao::pegtl::parse<spef::rule_spef, spef::action>(in, data);
-      //tao::pegtl::parse<spef::rule_spef>(in, data);
+      tao::pegtl::parse<spef::RuleSpef, spef::Action>(in, data);
+      //tao::pegtl::parse<spef::RuleSpef>(in, data);
 
       if(show){
         std::cout << "\n\n\n";
@@ -87,7 +89,7 @@ int main(int argc, char* argv[]){
       return 1;
     }
 
-    //std::cout << data.dump() << std::endl;
+    std::cout << data.dump() << std::endl;
   }
 
 

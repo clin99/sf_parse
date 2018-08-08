@@ -26,16 +26,6 @@
 
 namespace spef{
 
-/*
- *  A typical SPEF file will have 4 main sections:
- *  
- *    a header section,
- *    a name map section,
- *    a top level port section, and
- *    the main parasitic description section.
- */
-
-
 namespace double_
 {
   using namespace tao::TAO_PEGTL_NAMESPACE;  // NOLINT
@@ -342,20 +332,6 @@ struct Data {
   std::string resistance_unit;
   std::string inductance_unit;
 
-  const std::unordered_map<char, double> scale = {
-    {'K', 1e3},
-    {'M', 1e-3},
-    {'U', 1e-6},
-    {'N', 1e-9},
-    {'P', 1e-12},
-    {'F', 1e-15}
-  };
-
-  double t_unit {0.0};
-  double c_unit {0.0};
-  double r_unit {0.0};
-  double l_unit {0.0};
-
   std::unordered_map<std::string, std::string> name_map;
 
   // TODO: make it a vector
@@ -369,7 +345,7 @@ struct Data {
   std::string dump() const;
 
   template <typename T>
-  friend struct action;
+  friend struct Action;
 
   friend void split_on_space(const char*, const char*, std::vector<std::string_view>&);
 
@@ -383,22 +359,23 @@ struct Data {
 inline std::string Data::dump() const {
   std::ostringstream os;
   os 
-    << "Standard:"      << standard      << "\n" 
-    << "Design name:"   << design_name   << "\n" 
-    << "Date:"          << date          << "\n" 
-    << "Vendor:"        << vendor        << "\n"
-    << "Program:"       << program       << "\n"
-    << "Version:"       << version       << "\n"
-    << "Design Flow:"   << design_flow   << "\n"
-    << "Divider:"       << divider       << "\n"
-    << "Delimiter:"     << delimiter     << "\n"
-    << "Bus Delimiter:" << bus_delimiter << "\n"
-    << "T Unit:"        << t_unit        << "\n"
-    << "C Unit:"        << c_unit        << "\n"
-    << "R Unit:"        << r_unit        << "\n"
-    << "L Unit:"        << l_unit        << "\n"
+    << "Standard:"      << standard         << "\n" 
+    << "Design name:"   << design_name      << "\n" 
+    << "Date:"          << date             << "\n" 
+    << "Vendor:"        << vendor           << "\n"
+    << "Program:"       << program          << "\n"
+    << "Version:"       << version          << "\n"
+    << "Design Flow:"   << design_flow      << "\n"
+    << "Divider:"       << divider          << "\n"
+    << "Delimiter:"     << delimiter        << "\n"
+    << "Bus Delimiter:" << bus_delimiter    << "\n"
+    << "T_UNIT:"        << time_unit        << "\n"
+    << "C_UNIT:"        << capacitance_unit << "\n"
+    << "R_UNIT:"        << resistance_unit  << "\n"
+    << "L_UNIT:"        << inductance_unit  << "\n"
   ;
   os << '\n';
+  return os.str();
   if(not name_map.empty()){
     os << "*NAME_MAP\n";
   }
@@ -474,56 +451,26 @@ inline void Data::add_header(const std::string& s){
 
 namespace pegtl = tao::TAO_PEGTL_NAMESPACE;
 
-// TODO: rename it
-using token = pegtl::until<pegtl::at<pegtl::space>>;
-using delimiter = pegtl::plus<pegtl::space>;
+using RuleToken = pegtl::until<pegtl::at<pegtl::space>>;
+using RuleDontCare = pegtl::plus<pegtl::space>;
 
 template<typename T>
-struct action: pegtl::nothing<T>
-{};
-
-
-struct DontCare: pegtl::plus<pegtl::space>
+struct Action: pegtl::nothing<T>
 {};
 
 
 
-struct Quote: pegtl::string<'"'>
-{};
-//struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::not_at<Quote>, pegtl::any>, Quote>
+using Quote = pegtl::string<'"'>;
 struct QuotedString: pegtl::seq<Quote, pegtl::until<Quote>>
-//struct QuotedString: pegtl::must<Quote, pegtl::plus<pegtl::alpha>, Quote>
 {};
-//template<>
-//struct action<QuotedString>  
-//{
-//  template <typename Input>
-//  static void apply(const Input& in, Data& d){
-//    auto str {in.string()};
-//    d.add_header(str);
-//    //d.add_header(str.substr(1, str.size()-2));
-//  };
-//};
 
+struct Header: pegtl::plus<pegtl::seq<QuotedString, pegtl::star<RuleDontCare, QuotedString>>>
+{};
 
-struct Header: pegtl::plus<pegtl::seq<DontCare, QuotedString>>
+struct Divider: pegtl::any
 {};
 template<>
-struct action<Header>  
-{
-  template <typename Input>
-  static void apply(const Input& in, Data& d){
-    if(disable)
-      return ; 
-    d.add_header(in.string());
-  };
-};
-
-
-struct SpefDivider: pegtl::any
-{};
-template<>
-struct action<SpefDivider>  
+struct Action<Divider>  
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
@@ -533,15 +480,15 @@ struct action<SpefDivider>
     if(in.size() != 1){
       return false;
     }
-    d.add_header(in.string());
+    d.divider = in.string();
     return true;
   };
 };
 
-struct SpefDelimiter: pegtl::any
+struct Delimiter: pegtl::any
 {};
 template<>
-struct action<SpefDelimiter>  
+struct Action<Delimiter>  
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
@@ -551,24 +498,25 @@ struct action<SpefDelimiter>
     if(in.size() != 1){
       return false;
     }
-    d.add_header(in.string());
+    d.delimiter = in.string();
     return true;
   };
 };
 
-struct SpefBusDelimiter: pegtl::must<pegtl::any, pegtl::star<pegtl::space>, pegtl::any>
+struct BusDelimiter: pegtl::must<pegtl::any, pegtl::star<pegtl::space>, pegtl::any>
 {};
 template<>
-struct action<SpefBusDelimiter>  
+struct Action<BusDelimiter>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
     if(disable)
        return ; 
 
-    std::string str {in.string()};
-    str.erase(std::remove_if(str.begin(), str.end(), [](auto c){return std::isspace(c);}), str.end());
-    d.add_header(std::move(str));
+    d.bus_delimiter = in.string();
+    // Remove space between middle 
+    d.bus_delimiter.erase(std::remove_if(d.bus_delimiter.begin(), d.bus_delimiter.end(), 
+      [](auto c){return std::isspace(c);}), d.bus_delimiter.end());
   };
 };
 
@@ -576,102 +524,139 @@ struct action<SpefBusDelimiter>
 
 
 
-//  Header Section --------------------------------------------------------------------------------
+//  Header Section -------------------------------------------------------------------------------- 
 
-struct rule_standard: pegtl::must<TAO_PEGTL_STRING("*SPEF"), 
-  Header, DontCare>
-  //pegtl::plus<pegtl::seq<DontCare, QuotedString>>, DontCare> 
-  //pegtl::plus<pegtl::blank>, QuotedString, DontCare>
+const char* header_begin(const char* beg){
+  while(std::isspace(*beg)){
+    ++ beg;
+  }
+  return beg;
+}
+
+struct RuleStandard: pegtl::seq<TAO_PEGTL_STRING("*SPEF"), RuleDontCare, Header>
+{};
+template<>
+struct Action<RuleStandard>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.standard = in.string().erase(0, header_begin(in.begin()+sizeof("*SPEF"))-in.begin());
+  };
+};
+
+
+
+
+struct RuleDesign: pegtl::seq<TAO_PEGTL_STRING("*DESIGN"), RuleDontCare, Header>
+{};
+template<>
+struct Action<RuleDesign>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.design_name = in.string().erase(0, header_begin(in.begin()+sizeof("*DESIGN"))-in.begin());
+  };
+};
+
+struct RuleDate: pegtl::seq<TAO_PEGTL_STRING("*DATE"), RuleDontCare, Header>
+{};
+template<>
+struct Action<RuleDate>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.date = in.string().erase(0, header_begin(in.begin()+sizeof("*DATE"))-in.begin());
+  };
+};
+
+
+struct RuleVendor: pegtl::seq<TAO_PEGTL_STRING("*VENDOR"), RuleDontCare, Header>
+{};
+template<>
+struct Action<RuleVendor>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.vendor = in.string().erase(0, header_begin(in.begin()+sizeof("*VENDOR"))-in.begin());
+  };
+};
+
+
+struct RuleProgram: pegtl::seq<TAO_PEGTL_STRING("*PROGRAM"), RuleDontCare, Header>
+{};
+template<>
+struct Action<RuleProgram>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.program = in.string().erase(0, header_begin(in.begin()+sizeof("*PROGRAM"))-in.begin());
+  };
+};
+
+struct RuleVersion: pegtl::seq<TAO_PEGTL_STRING("*VERSION"), RuleDontCare, Header>
+{};
+template<>
+struct Action<RuleVersion>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.version = in.string().erase(0, header_begin(in.begin()+sizeof("*VERSION"))-in.begin());
+  };
+};
+
+struct RuleDesignFlow: pegtl::seq<TAO_PEGTL_STRING("*DESIGN_FLOW"), RuleDontCare, Header>
+{};
+template<>
+struct Action<RuleDesignFlow>  
+{
+  template <typename Input>
+  static void apply(const Input& in, Data& d){
+    d.design_flow = in.string().erase(0, header_begin(in.begin()+sizeof("*DESIGN_FLOW"))-in.begin());
+  };
+};
+
+struct RuleDivider: pegtl::seq<TAO_PEGTL_STRING("*DIVIDER"), RuleDontCare, Divider>
 {};
 
-struct rule_design: pegtl::must<TAO_PEGTL_STRING("*DESIGN"), 
-  Header, DontCare>
+struct RuleDelimiter: pegtl::seq<TAO_PEGTL_STRING("*DELIMITER"), RuleDontCare, Delimiter>
 {};
 
-struct rule_date: pegtl::must<TAO_PEGTL_STRING("*DATE"), 
-  Header, DontCare>
+struct RuleBusDelimiter: pegtl::seq<TAO_PEGTL_STRING("*BUS_DELIMITER"), RuleDontCare, BusDelimiter>
 {};
 
-struct rule_vendor: pegtl::must<TAO_PEGTL_STRING("*VENDOR"), 
-  Header, DontCare>
-{};
 
-struct rule_program: pegtl::must<TAO_PEGTL_STRING("*PROGRAM"), 
-  Header, DontCare>
-{};
-
-struct rule_version: pegtl::must<TAO_PEGTL_STRING("*VERSION"), 
-  Header, DontCare>
-{};
-
-struct rule_design_flow: pegtl::must<TAO_PEGTL_STRING("*DESIGN_FLOW"), 
-  Header, DontCare>
-{};
-
-struct rule_divider: pegtl::must<TAO_PEGTL_STRING("*DIVIDER"), 
-  delimiter, SpefDivider, DontCare>
-{};
-
-struct rule_delimiter: pegtl::must<TAO_PEGTL_STRING("*DELIMITER"), delimiter, SpefDelimiter, DontCare>
-{};
-
-// TODO: replace delimiter with RuleDontCare
-//RuleDontCare
-
-struct rule_bus_delimiter: pegtl::must<TAO_PEGTL_STRING("*BUS_DELIMITER"), delimiter, SpefBusDelimiter, DontCare>
-{};
-
-// TODO: bol
-struct rule_unit: pegtl::seq<TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,
-  TAO_PEGTL_STRING("_UNIT"), delimiter, double_::rule, 
-  delimiter, pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
+struct RuleUnit: pegtl::seq<TAO_PEGTL_STRING("*"), pegtl::one<'T','C','R','L'>,
+  TAO_PEGTL_STRING("_UNIT"), RuleDontCare, double_::rule, 
+  RuleDontCare, pegtl::opt<pegtl::one<'K','M','U','N','P','F'>>, 
   pegtl::sor<TAO_PEGTL_STRING("HENRY"), TAO_PEGTL_STRING("OHM"), pegtl::one<'S','F','H'>>>
 {};
 template <>
-struct action<rule_unit>  
+struct Action<RuleUnit>  
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
     if(disable)
       return true; 
-
-    //auto vec = split_on_space(str);
-
-    //auto& vec = split_on_space(in.begin(), in.end());
-    split_on_space(in.begin(), in.end(), d._tokens);
-
+    switch(in.peek_char(1)){
+      case 'T': d.time_unit = in.string().erase(0, header_begin(in.begin()+sizeof("*T_UNIT"))-in.begin());
+        break;
+      case 'C': d.capacitance_unit = in.string().erase(0, header_begin(in.begin()+sizeof("*C_UNIT"))-in.begin());
+        break;
+      case 'R': d.resistance_unit = in.string().erase(0, header_begin(in.begin()+sizeof("*R_UNIT"))-in.begin());
+        break;
+      case 'L': d.inductance_unit = in.string().erase(0, header_begin(in.begin()+sizeof("*L_UNIT"))-in.begin());
+        break;
+      default: break;
+    }
     return true;
-
-    /*double scale {1.0};
-    if(vec[2].size() > 1 and d.scale.find(vec[2][0]) != d.scale.end()){
-      scale = d.scale.at(vec[2][0]);
-    }
-
-    switch(vec[0][1]){
-      case 'T':
-        d.t_unit = std::stod(vec[1])*scale;
-        break;
-      case 'C':
-        d.c_unit = std::stod(vec[1])*scale;
-        break;
-      case 'R':
-        d.r_unit = std::stod(vec[1])*scale;
-        break;
-      case 'L':
-        d.l_unit = std::stod(vec[1])*scale;
-        break;
-      default:
-        break;
-    }
-    return true;*/
   }
 };
 
 
-struct rule_name_map_beg: pegtl::seq<TAO_PEGTL_STRING("*NAME_MAP"), DontCare>
+struct RuleNameMapBeg: pegtl::seq<TAO_PEGTL_STRING("*NAME_MAP"), RuleDontCare>
 {};
 template <>
-struct action<rule_name_map_beg>  
+struct Action<RuleNameMapBeg>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -681,13 +666,13 @@ struct action<rule_name_map_beg>
   }
 };
 
-struct rule_name_map: pegtl::seq<
+struct RuleNameMap: pegtl::seq<
   pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, 
-  TAO_PEGTL_STRING("*"), token, delimiter, token
+  TAO_PEGTL_STRING("*"), RuleToken, RuleDontCare, RuleToken
 >
 {};
 template <>
-struct action<rule_name_map>  
+struct Action<RuleNameMap>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -700,10 +685,10 @@ struct action<rule_name_map>
 };
 
 
-struct rule_port_beg: pegtl::seq<TAO_PEGTL_STRING("*PORTS"), DontCare>
+struct RulePortBeg: pegtl::seq<TAO_PEGTL_STRING("*PORTS"), RuleDontCare>
 {};
 template <>
-struct action<rule_port_beg>  
+struct Action<RulePortBeg>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -714,9 +699,9 @@ struct action<rule_port_beg>
 };
 
 // TODO: All sections are optional
-struct rule_port: pegtl::seq<
+struct RulePort: pegtl::seq<
   pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, TAO_PEGTL_STRING("*"),
-  token, delimiter,
+  RuleToken, RuleDontCare,
   pegtl::must<pegtl::one<'I','O','B'>>,
 
   /*pegtl::opt<
@@ -732,19 +717,19 @@ struct rule_port: pegtl::seq<
   
   pegtl::star<pegtl::sor<
     pegtl::seq<
-      delimiter, pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, delimiter, double_::rule>
+      RuleDontCare, pegtl::seq<TAO_PEGTL_STRING("*C"), RuleDontCare, double_::rule, RuleDontCare, double_::rule>
     >,
     pegtl::seq<
-      delimiter, pegtl::seq<TAO_PEGTL_STRING("*L"), delimiter, double_::rule>
+      RuleDontCare, pegtl::seq<TAO_PEGTL_STRING("*L"), RuleDontCare, double_::rule>
     >,
     pegtl::seq<
-      delimiter, pegtl::seq<TAO_PEGTL_STRING("*S"), delimiter, double_::rule, delimiter, double_::rule>
+      RuleDontCare, pegtl::seq<TAO_PEGTL_STRING("*S"), RuleDontCare, double_::rule, RuleDontCare, double_::rule>
     >
   >>
 >
 {};
 template <>
-struct action<rule_port>  
+struct Action<RulePort>  
 {
   template <typename Input>
   static bool apply(const Input& in, Data& d){
@@ -792,10 +777,10 @@ struct action<rule_port>
 
 
 
-struct rule_conn_beg: pegtl::seq<TAO_PEGTL_STRING("*CONN")>
+struct RuleConnBeg: pegtl::seq<TAO_PEGTL_STRING("*CONN")>
 {};
 template <>
-struct action<rule_conn_beg>
+struct Action<RuleConnBeg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -803,29 +788,29 @@ struct action<rule_conn_beg>
 };
 
 
-struct rule_conn: pegtl::seq<
+struct RuleConn: pegtl::seq<
   pegtl::sor<TAO_PEGTL_STRING("*P"), TAO_PEGTL_STRING("*I")>, 
-  delimiter, token, delimiter, pegtl::must<pegtl::one<'I','O','B'>>, 
+  RuleDontCare, RuleToken, RuleDontCare, pegtl::must<pegtl::one<'I','O','B'>>, 
   
   pegtl::star<pegtl::sor<
-    pegtl::seq<delimiter, pegtl::seq<TAO_PEGTL_STRING("*C"), delimiter, double_::rule, 
-      delimiter, double_::rule>>,
+    pegtl::seq<RuleDontCare, pegtl::seq<TAO_PEGTL_STRING("*C"), RuleDontCare, double_::rule, 
+      RuleDontCare, double_::rule>>,
 
-    pegtl::seq<delimiter, pegtl::seq<TAO_PEGTL_STRING("*L"), delimiter, double_::rule>>,
+    pegtl::seq<RuleDontCare, pegtl::seq<TAO_PEGTL_STRING("*L"), RuleDontCare, double_::rule>>,
 
-    pegtl::seq<delimiter, pegtl::seq<TAO_PEGTL_STRING("*D"), delimiter, 
+    pegtl::seq<RuleDontCare, pegtl::seq<TAO_PEGTL_STRING("*D"), RuleDontCare, 
       pegtl::plus<pegtl::identifier_other>>>
-  >>
+    >
+  >
 >
 {};
 template <>
-struct action<rule_conn>
+struct Action<RuleConn>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
     if(disable)
       return ;
-
 
     auto &c = d._current_net->connections.emplace_back();
 
@@ -870,10 +855,10 @@ struct action<rule_conn>
 
 
 
-struct rule_cap_beg: pegtl::seq<TAO_PEGTL_STRING("*CAP")>
+struct RuleCapBeg: pegtl::seq<TAO_PEGTL_STRING("*CAP")>
 {};
 template <>
-struct action<rule_cap_beg>
+struct Action<RuleCapBeg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){}
@@ -881,12 +866,12 @@ struct action<rule_cap_beg>
 
 
 
-struct rule_cap_ground: pegtl::seq<
-  pegtl::plus<pegtl::digit>, delimiter, token, delimiter, double_::rule
+struct RuleCapGround: pegtl::seq<
+  pegtl::plus<pegtl::digit>, RuleDontCare, RuleToken, RuleDontCare, double_::rule
 >
 {};
 template <>
-struct action<rule_cap_ground>
+struct Action<RuleCapGround>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -902,12 +887,12 @@ struct action<rule_cap_ground>
 };
 
 
-struct rule_cap_couple: pegtl::seq<
-  pegtl::plus<pegtl::digit>, delimiter, token, delimiter, token, delimiter, double_::rule
+struct RuleCapCouple: pegtl::seq<
+  pegtl::plus<pegtl::digit>, RuleDontCare, RuleToken, RuleDontCare, RuleToken, RuleDontCare, double_::rule
 >
 {};
 template <>
-struct action<rule_cap_couple>
+struct Action<RuleCapCouple>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -922,22 +907,22 @@ struct action<rule_cap_couple>
 
 
 
-struct rule_res_beg: pegtl::seq<TAO_PEGTL_STRING("*RES")>
+struct RuleResBeg: pegtl::seq<TAO_PEGTL_STRING("*RES")>
 {};
 template <>
-struct action<rule_res_beg>
+struct Action<RuleResBeg>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){}
 };
 
-struct rule_res: pegtl::seq<
-  pegtl::plus<pegtl::digit>, delimiter,
-  token, delimiter, token, delimiter, double_::rule
+struct RuleRes: pegtl::seq<
+  pegtl::plus<pegtl::digit>, RuleDontCare,
+  RuleToken, RuleDontCare, RuleToken, RuleDontCare, double_::rule
 >
 {};
 template <>
-struct action<rule_res>
+struct Action<RuleRes>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -952,15 +937,12 @@ struct action<rule_res>
 };
 
 
-
-
-
-struct rule_net_beg: pegtl::seq<
-  TAO_PEGTL_STRING("*D_NET"), delimiter, token, delimiter, double_::rule
+struct RuleNetBeg: pegtl::seq<
+  TAO_PEGTL_STRING("*D_NET"), RuleDontCare, RuleToken, RuleDontCare, double_::rule
 >
 {};
 template <>
-struct action<rule_net_beg>  
+struct Action<RuleNetBeg>  
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){
@@ -968,8 +950,6 @@ struct action<rule_net_beg>
       return ; 
     split_on_space(in.begin(), in.end(), d._tokens);
     
-    // TODO: replace current_net with raw pointer?
-    //d._current_net = &(d.nets[{std::string{d._tokens[1]}}]);
     d._current_net = &(d.nets.emplace_back());
     d._current_net->name = d._tokens[1];
     d._current_net->lcap = std::strtof(d._tokens[2].data(), nullptr);
@@ -977,10 +957,10 @@ struct action<rule_net_beg>
 };
 
 
-struct rule_net_end: pegtl::seq<TAO_PEGTL_STRING("*END")>
+struct RuleNetEnd: pegtl::seq<TAO_PEGTL_STRING("*END")>
 {};
 template <>
-struct action<rule_net_end>
+struct Action<RuleNetEnd>
 {
   template <typename Input>
   static void apply(const Input& in, Data& d){}
@@ -988,30 +968,32 @@ struct action<rule_net_end>
 
 
 //-------------------------------------------------------------------------------------------------
-struct rule_spef: pegtl::must<
-  pegtl::star<pegtl::space>,
-  rule_standard,
-  rule_design, 
-  rule_date, 
-  rule_vendor,
-  rule_program,
-  rule_version,
-  rule_design_flow,
-  rule_divider,
-  rule_delimiter,
-  rule_bus_delimiter,
-  pegtl::rep_max<4, pegtl::seq<rule_unit, DontCare>>,
+struct RuleSpef: pegtl::must<pegtl::star<pegtl::space>,
+  pegtl::rep_max<14, pegtl::sor<
+    pegtl::seq<RuleStandard,     RuleDontCare>,
+    pegtl::seq<RuleDesign,       RuleDontCare>,
+    pegtl::seq<RuleDate,         RuleDontCare>,
+    pegtl::seq<RuleVendor,       RuleDontCare>,
+    pegtl::seq<RuleProgram,      RuleDontCare>,
+    pegtl::seq<RuleVersion,      RuleDontCare>,
+    pegtl::seq<RuleDesignFlow,   RuleDontCare>,
+    pegtl::seq<RuleDivider,      RuleDontCare>,
+    pegtl::seq<RuleDelimiter,    RuleDontCare>, 
+    pegtl::seq<RuleBusDelimiter, RuleDontCare>>
+  >,
+  pegtl::rep_max<4, pegtl::seq<RuleUnit, RuleDontCare>>,
+
   // TODO: opt no need star
-  pegtl::opt<rule_name_map_beg, pegtl::star<pegtl::seq<rule_name_map, DontCare>>>,
-  // TODO: opt port 
-  pegtl::opt<rule_port_beg, pegtl::star<pegtl::seq<rule_port, DontCare>>>,
-  pegtl::star<rule_net_beg, DontCare,
-    // change plus to star
-    pegtl::if_must<pegtl::seq<rule_conn_beg, DontCare>, pegtl::star<pegtl::seq<rule_conn, DontCare>>>,
-    pegtl::if_must<pegtl::seq<rule_cap_beg,  DontCare>, 
-      pegtl::star<pegtl::seq<pegtl::sor<rule_cap_ground, rule_cap_couple>, DontCare>>>,
-    pegtl::if_must<pegtl::seq<rule_res_beg,  DontCare>, pegtl::star<pegtl::seq<rule_res, DontCare>>>, 
-    rule_net_end, DontCare
+  pegtl::opt<RuleNameMapBeg, pegtl::star<pegtl::seq<RuleNameMap, RuleDontCare>>>,
+
+  pegtl::opt<RulePortBeg,    pegtl::star<pegtl::seq<RulePort, RuleDontCare>>>,
+
+  pegtl::star<RuleNetBeg, RuleDontCare,
+    pegtl::if_must<pegtl::seq<RuleConnBeg, RuleDontCare>, pegtl::star<pegtl::seq<RuleConn, RuleDontCare>>>,
+    pegtl::if_must<pegtl::seq<RuleCapBeg,  RuleDontCare>, 
+      pegtl::star<pegtl::seq<pegtl::sor<RuleCapGround, RuleCapCouple>, RuleDontCare>>>,
+    pegtl::if_must<pegtl::seq<RuleResBeg,  RuleDontCare>, pegtl::star<pegtl::seq<RuleRes, RuleDontCare>>>, 
+    RuleNetEnd, RuleDontCare
   >
 >
 {};
@@ -1019,7 +1001,8 @@ struct rule_spef: pegtl::must<
 
 
 //-------------------------------------------------------------------------------------------------
-//struct rule_qq: pegtl::must<pegtl::plus<pegtl::digit, pegtl::blank, pegtl::alpha, pegtl::space, pegtl::digit>>
+//struct rule_qq: pegtl::must<pegtl::plus<pegtl::digit, pegtl::blank, pegtl::alpha, pegtl::space, pegtl::digit>> 
+/*
 struct rule_qq: pegtl::must<pegtl::plus<pegtl::seq<pegtl::digit, pegtl::blank>>, pegtl::alpha>
 {};
 template <>
@@ -1050,7 +1033,7 @@ template<> const std::string my_control<pegtl::alpha>::error_message = "Alpha er
 template<> const std::string my_control<pegtl::plus<pegtl::digit>>::error_message = "Hello";
 //template<> const std::string my_control<rule_spef>::error_message = "Rule spef parse error!";
 template<> const std::string my_control<pegtl::plus<pegtl::seq<pegtl::digit, pegtl::blank>>>::error_message = "AA";
-
+*/
 
 
 };    // end of namespace spef. --------------------------------------------------------------------

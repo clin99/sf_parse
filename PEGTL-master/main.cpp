@@ -90,7 +90,7 @@ int main(int argc, char* argv[]){
       const auto p = e.positions.front();
       std::cout << "Fail at line " << p.line << ":\n";
       std::cout << "  " << in.line_as_string(p) << '\n';
-      std::cout << "  " << std::string(p.byte_in_line, ' ') << '^' << '\n';
+      std::cout << "  " << std::string(p.byte_in_line, ' ') << "\033[31m^\033[0m" << '\n';
       return 1;
     }
 

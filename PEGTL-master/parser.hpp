@@ -560,7 +560,7 @@ struct Action<RuleNameMapBeg>
 
 struct RuleNameMap: pegtl::seq<
   pegtl::not_at<TAO_PEGTL_STRING("*PORTS")>, pegtl::not_at<TAO_PEGTL_STRING("*D_NET")>, 
-  pegtl::must<TAO_PEGTL_STRING("*"), RuleToken, RuleDontCare, RuleToken>
+  TAO_PEGTL_STRING("*"), pegtl::must<RuleToken, RuleDontCare, RuleToken>
 >
 {};
 template <>
@@ -849,7 +849,7 @@ struct Action<RuleInputEnd>
   template <typename Input>
   static void apply(const Input& in, Spef& d){
     if(in.size() != 0){
-      throw tao::pegtl::parse_error("Unrecognized token", in);
+    //  throw tao::pegtl::parse_error("Unrecognized token", in);
     }
   }
 };
@@ -905,7 +905,8 @@ struct ParserControl : tao::pegtl::normal<Rule>
    }
 };
 
-template<typename T> const std::string ParserControl<T>::error_message  = "Fail to parse the Spef";
+template<typename T> const std::string ParserControl<T>::error_message = "Fail to parse the Spef" + 
+  tao::pegtl::internal::demangle< T>();
 
 };    // end of namespace spef. --------------------------------------------------------------------
 

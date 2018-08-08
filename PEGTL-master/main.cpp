@@ -55,6 +55,15 @@ int main(int argc, char* argv[]){
     return 1;
   }
 
+  {
+    spef::Spef spef_data;
+    if(parse_spef(argv[1], spef_data)){
+      std::cout << spef_data.dump() << '\n';
+    }
+  }
+
+  return 0;
+
   bool show {false};
   //std::ifstream ifs("/home/clin99/Software/OpenTimer/benchmark/vga_lcd/vga_lcd.spef");
   //std::ifstream ifs("/home/clin99/Software/spirit/aes_cipher_top.spef");

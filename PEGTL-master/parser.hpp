@@ -2,9 +2,6 @@
 #define SPEF_HPP_
 
 // TODO:
-// current_net => Net* _current_net;
-// atof.... => use float 
-// make std::vector<std::string_view> private and shared
 // add constructor for sub structs so we can fully utilize the try_emplace
 
 #include <tao/pegtl.hpp>
@@ -23,6 +20,8 @@
 #include <regex>
 #include <string_view>
 #include <optional>
+#include <experimental/filesystem>
+#include <fstream>
 
 namespace spef{
 
@@ -872,6 +871,51 @@ struct ParserControl : tao::pegtl::normal<Rule>
 
 template<typename T> const std::string ParserControl<T>::error_message = "Fail to match the Spef rule: \033[31m" + 
   tao::pegtl::internal::demangle< T>() + "\033[0m";
+
+
+
+inline bool parse_spef(const std::experimental::filesystem::path &p, Spef& sf){
+  if(not std::experimental::filesystem::exists(p)){
+    std::cout << "The provided path does not exist!\n";
+    return false;
+  }
+
+  std::ifstream ifs(p);
+
+  ifs.seekg(0, std::ios::end);
+  std::string buffer(ifs.tellg(), ' ');
+  ifs.seekg(0);
+  ifs.read(&buffer[0], buffer.size()); 
+  ifs.close();
+
+  for(size_t i=0; i<buffer.size(); i++){
+    if(buffer[i] == '/' && i+1 < buffer.size() && buffer[i+1] == '/') {
+      buffer[i] = buffer[i+1] = ' ';
+      for(i=i+2; i<buffer.size(); ++i) {
+        if(buffer[i] == '\n' || buffer[i] == '\r') {
+          break;
+        }
+        else buffer[i] = ' ';
+      }
+    }
+  }
+
+  tao::pegtl::memory_input<> in(buffer, "");
+  try{
+    tao::pegtl::parse<spef::RuleSpef, spef::Action, spef::ParserControl>(in, sf);
+    return true;
+  }
+  catch(const tao::pegtl::parse_error& e){
+    std::cout << e.what() << std::endl;
+    const auto p = e.positions.front();
+    std::cout << "Fail at line " << p.line << ":\n";
+    std::cout << "  " << in.line_as_string(p) << '\n';
+    std::cout << "  " << std::string(p.byte_in_line, ' ') << "\033[31m^\033[0m" << '\n';
+    return false;
+  }
+}
+
+
 
 };    // end of namespace spef. --------------------------------------------------------------------
 
